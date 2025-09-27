@@ -7,6 +7,8 @@ import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import http.util.IOUtils;
+
 public class RequestHandler implements Runnable{
     Socket connection;
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
@@ -19,8 +21,8 @@ public class RequestHandler implements Runnable{
     public void run() {
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            DataOutputStream dos = new DataOutputStream(out);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in)); // 라인 단위 읽기 기능 추가
+            DataOutputStream dos = new DataOutputStream(out); // 바이트 단위 쓰기 기능 추가
 
             // HTTP 요청 라인 읽기 -> etc: "GET /index.html HTTP/1.1"
             String requestLine = br.readLine();
@@ -50,6 +52,26 @@ public class RequestHandler implements Runnable{
                 path = fullPath.substring(0, fullPath.indexOf("?"));
             }
             log.log(Level.INFO, "Method: " + method + ", Path: " + path + ", Version: " + httpVersion);
+
+            // HTTP 헤더들 읽기 (빈 라인까지)
+            String headerLine;
+            int contentLength = 0;
+            while ((headerLine = br.readLine()) != null && !headerLine.isEmpty()) {
+                log.log(Level.INFO, "Header: " + headerLine);
+                
+                // Content-Length 헤더 파싱
+                if (headerLine.startsWith("Content-Length:")) {
+                    contentLength = Integer.parseInt(headerLine.substring(15).trim());
+                }
+            }
+            log.log(Level.INFO, "Headers read complete. Content-Length: " + contentLength);
+            
+            // POST 요청의 바디 데이터 읽기
+            String requestBody = null;
+            if ("POST".equals(method) && contentLength > 0) {
+                requestBody = IOUtils.readData(br, contentLength);
+                log.log(Level.INFO, "Request body: " + requestBody);
+            }
 
             // 경로에 따른 파일 매핑 로직
             // 1. 루트 경로 ("/") 처리 - 기본 페이지로 리다이렉트
