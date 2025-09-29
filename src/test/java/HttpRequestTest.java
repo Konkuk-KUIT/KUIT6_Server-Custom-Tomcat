@@ -23,7 +23,7 @@ public class HttpRequestTest {
     @DisplayName("POST 요청을 파싱할 때 메서드, URL, 헤더, 바디가 올바르게 파싱되어야 한다")
     public void parsePostRequestWithBodyAndHeaders() throws IOException {
         // given
-        BufferedReader br = bufferedReaderFromFile(TEST_DIRECTORY + "post_request.txt");
+        BufferedReader br = bufferedReaderFromFile(TEST_DIRECTORY + "request/post_request.txt");
         
         // when
         HttpRequest httpRequest = HttpRequest.from(br);
@@ -42,7 +42,7 @@ public class HttpRequestTest {
     @DisplayName("GET 요청을 파싱할 때 쿼리 파라미터와 쿠키가 올바르게 파싱되어야 한다")
     public void parseGetRequestWithQueryParametersAndCookies() throws IOException {
         // given
-        BufferedReader br = bufferedReaderFromFile(TEST_DIRECTORY + "get_request.txt");
+        BufferedReader br = bufferedReaderFromFile(TEST_DIRECTORY + "request/get_request.txt");
         
         // when
         HttpRequest httpRequest = HttpRequest.from(br);
