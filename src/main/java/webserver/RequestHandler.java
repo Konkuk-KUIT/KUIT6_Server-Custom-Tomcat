@@ -78,6 +78,31 @@ public class RequestHandler implements Runnable{
                 return;
             }
 
+            if(url.equals("/user/login")) {
+                int contentLength = 0;
+                while (true) {
+                    final String line = br.readLine();
+                    if (line.equals("")) {
+                        break;
+                    }
+                    // header info
+                    if (line.startsWith("Content-Length")) {
+                        contentLength = Integer.parseInt(line.split(": ")[1]);
+                    }
+                }
+                String body = IOUtils.readData(br, contentLength);
+                String[] queryParamArr = body.split("&");
+                String userId = queryParamArr[0].split("=")[1];
+                String userPw = queryParamArr[1].split("=")[1];
+                User user = memoryUserRepository.findUserById(userId);
+                if(user != null && userPw.equals(user.getPassword())) {
+                    response302Header(dos, "/index.html", "logined=true");
+                    return;
+                }
+                response302Header(dos, "/user/login_failed.html");
+                return;
+            }
+
 
             Path filePath = Paths.get("./webapp" + url);
             byte[] body;
@@ -120,6 +145,19 @@ public class RequestHandler implements Runnable{
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {}
+    }
+
+    public void response302Header(DataOutputStream dos, String path, String setCookie) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("\r\n");
+            if (setCookie != null && !setCookie.isEmpty()) {
+                dos.writeBytes("Set-Cookie: " + setCookie + "\r\n");
+            }
             dos.writeBytes("\r\n");
         } catch (IOException e) {}
     }
