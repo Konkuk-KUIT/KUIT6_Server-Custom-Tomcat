@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 import db.MemoryUserRepository;
 import http.util.HttpRequestUtils;
 import http.HttpRequest;
+import http.HttpResponse;
 import model.User;
 import http.enums.HttpMethod;
 import http.enums.HttpHeader;
@@ -32,7 +33,7 @@ public class RequestHandler implements Runnable{
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            DataOutputStream dos = new DataOutputStream(out);
+            HttpResponse httpResponse = new HttpResponse(out);
 
             // HttpRequest 객체로 HTTP 요청 파싱
             HttpRequest httpRequest = HttpRequest.from(br);
@@ -82,7 +83,7 @@ public class RequestHandler implements Runnable{
                 log.log(Level.INFO, "New User Registered: " + newUser.getUserId());
 
                 // 302 리다이렉트로 메인 페이지로 이동
-                response302Header(dos, RequestPath.INDEX.getValue());
+                httpResponse.redirect(RequestPath.INDEX.getValue());
                 return;
             }
 
@@ -103,12 +104,12 @@ public class RequestHandler implements Runnable{
                 if (user != null && user.getPassword().equals(password)) {
                     // 로그인 성공: Cookie 설정 + 메인페이지로 리다이렉트
                     log.log(Level.INFO, "Login successful: " + userId);
-                    response302HeaderWithCookie(dos, RequestPath.INDEX.getValue(), "logined=true");
+                    httpResponse.redirectWithCookie(RequestPath.INDEX.getValue(), "logined=true");
                     return;
                 } else {
                     // 로그인 실패: 에러페이지로 리다이렉트
                     log.log(Level.WARNING, "Login failed: " + userId);
-                    response302Header(dos, RequestPath.USER_LOGIN_FAILED.getValue());
+                    httpResponse.redirect(RequestPath.USER_LOGIN_FAILED.getValue());
                     return;
                 }
             }
@@ -121,7 +122,7 @@ public class RequestHandler implements Runnable{
                     path = RequestPath.USER_LIST_HTML.getValue();
                 } else {
                     // 비로그인 상태
-                    response302Header(dos, RequestPath.USER_LOGIN_HTML.getValue());
+                    httpResponse.redirect(RequestPath.USER_LOGIN_HTML.getValue());
                     return;
                 }
             }
@@ -138,28 +139,15 @@ public class RequestHandler implements Runnable{
                 return;
             }
 
-            // 3. webapp 폴더 기준으로 실제 파일 경로 생성
-            String filePath = "webapp" + path;
-            log.log(Level.INFO, "File path: " + filePath);
-
             try {
-                // 4. 파일 존재 여부 확인 및 읽기
-                byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
-                log.log(Level.INFO, "File read successfully: " + filePath);
-
-                // 5. 성공적으로 읽었으면 200 OK 응답
-                String contentType = getContentType(filePath);
-                response200Header(dos, fileContent.length, contentType);
-                responseBody(dos, fileContent);
+                // 3. 파일 forward
+                httpResponse.forward(path);
+                log.log(Level.INFO, "File forwarded successfully: " + path);
 
             } catch (IOException fileException) {
-                // 6. 파일이 없거나 읽기 실패시 로그 기록
-                log.log(Level.WARNING, "File not found or read error: " + filePath);
-                // TODO: 404 에러 응답 구현
-                byte[] errorBody = "404 Not Found".getBytes();
-
-                response200Header(dos, errorBody.length, ContentType.TEXT_HTML.getValue());
-                responseBody(dos, errorBody);
+                // 4. 파일이 없거나 읽기 실패시 404 에러 응답
+                log.log(Level.WARNING, "File not found or read error: " + path);
+                httpResponse.notFound();
             }
 
         } catch (IOException e) {
@@ -167,48 +155,4 @@ public class RequestHandler implements Runnable{
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
-        try {
-            dos.writeBytes(HttpStatus.OK.getStatusLine() + " \r\n");
-            dos.writeBytes(HttpHeader.CONTENT_TYPE.getValue() + ": " + contentType + "\r\n");
-            dos.writeBytes(HttpHeader.CONTENT_LENGTH.getValue() + ": " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
-    private void response302Header(DataOutputStream dos, String redirectPath) {
-        try {
-            dos.writeBytes(HttpStatus.FOUND.getStatusLine() + "\r\n");
-            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + redirectPath + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
-    private void response302HeaderWithCookie(DataOutputStream dos, String redirectPath, String cookieValue) {
-        try {
-            dos.writeBytes(HttpStatus.FOUND.getStatusLine() + "\r\n");
-            dos.writeBytes(HttpHeader.SET_COOKIE.getValue() + ": " + cookieValue + "\r\n");
-            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + redirectPath + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
-    private String getContentType(String filePath) {
-        return ContentType.fromFileExtension(filePath).getValue();
-    }
-
-    private void responseBody(DataOutputStream dos, byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
 }
