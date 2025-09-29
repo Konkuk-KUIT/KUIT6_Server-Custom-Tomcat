@@ -13,7 +13,7 @@ import java.io.IOException;
 
 import static org.mockito.Mockito.*;
 
-public class StaticFileControllerTest {
+public class ForwardControllerTest {
 
     @Mock
     private HttpRequest mockRequest;
@@ -21,12 +21,12 @@ public class StaticFileControllerTest {
     @Mock
     private HttpResponse mockResponse;
 
-    private StaticFileController controller;
+    private ForwardController controller;
 
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        controller = new StaticFileController();
+        controller = new ForwardController();
     }
 
     @Test

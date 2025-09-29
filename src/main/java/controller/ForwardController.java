@@ -8,8 +8,8 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class StaticFileController implements Controller {
-    private static final Logger log = Logger.getLogger(StaticFileController.class.getName());
+public class ForwardController implements Controller {
+    private static final Logger log = Logger.getLogger(ForwardController.class.getName());
 
     @Override
     public void execute(HttpRequest request, HttpResponse response) throws IOException {
