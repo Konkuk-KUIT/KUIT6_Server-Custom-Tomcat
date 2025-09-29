@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 
 import controller.UserSignupController;
 import controller.UserLoginController;
+import controller.UserListController;
 import http.HttpRequest;
 import http.HttpResponse;
 import http.enums.HttpMethod;
@@ -65,15 +66,9 @@ public class RequestHandler implements Runnable{
 
             // userList 경로 처리
             if (path.equals(RequestPath.USER_LIST.getValue())) {
-                // Cookie 에서 로그인 상태 확인
-                if (cookieValue != null && cookieValue.contains("logined=true")) {
-                    // user/list.html 파일
-                    path = RequestPath.USER_LIST_HTML.getValue();
-                } else {
-                    // 비로그인 상태
-                    httpResponse.redirect(RequestPath.USER_LOGIN_HTML.getValue());
-                    return;
-                }
+                UserListController controller = new UserListController();
+                controller.execute(httpRequest, httpResponse);
+                return;
             }
 
             // 1. 루트 경로 ("/") 처리 - 기본 페이지로 리다이렉트
