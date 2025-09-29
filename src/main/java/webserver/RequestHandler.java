@@ -1,5 +1,8 @@
 package webserver;
 
+import db.MemoryUserRepository;
+import model.User;
+
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -15,6 +18,8 @@ public class RequestHandler implements Runnable{
     public RequestHandler(Socket connection) {
         this.connection = connection;
     }
+
+    MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance();
 
     @Override
     public void run() {
@@ -34,6 +39,21 @@ public class RequestHandler implements Runnable{
             if (url.equals("/")) {
                 url = "/index.html";
             }
+            else if (url.startsWith("/user/signup")) {
+                String queryParams = url.split("\\?")[1];
+                String [] queryParamArr = queryParams.split("&");
+                String userId = queryParamArr[0].split("=")[1];
+                String userPw = queryParamArr[1].split("=")[1];
+                String userName = queryParamArr[2].split("=")[1];
+                String userEmail = queryParamArr[3].split("=")[1];
+                User user = new User(userId, userPw, userName, userEmail);
+                memoryUserRepository.addUser(user);
+                log.info("Query Params: " + queryParams);
+                response302Header(dos, "/index.html");
+                return;
+
+            }
+
 
             Path filePath = Paths.get("./webapp" + url);
             byte[] body;
@@ -70,6 +90,14 @@ public class RequestHandler implements Runnable{
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
+    }
+
+    public void response302Header(DataOutputStream dos, String path) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {}
     }
 
     private void responseBody(DataOutputStream dos, byte[] body) {
