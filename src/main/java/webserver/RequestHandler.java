@@ -9,14 +9,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import controller.UserSignupController;
-import db.MemoryUserRepository;
-import http.util.HttpRequestUtils;
+import controller.UserLoginController;
 import http.HttpRequest;
 import http.HttpResponse;
-import model.User;
 import http.enums.HttpMethod;
 import http.enums.RequestPath;
-import model.UserField;
 
 public class RequestHandler implements Runnable{
     Socket connection;
@@ -59,31 +56,11 @@ public class RequestHandler implements Runnable{
                 return;
             }
 
-            // 로그인 처리
+            // 로그인 처리 (POST 방식만)
             if (path.equals(RequestPath.USER_LOGIN.getValue()) && HttpMethod.POST.getValue().equals(method)) {
-                // POST 방식의 로그인만 처리
-                Map<String, String> params = HttpRequestUtils.parseQueryParameter(requestBody);
-                log.log(Level.INFO, "Login params: " + params);
-
-                String userId = params.get(UserField.USER_ID.getValue());
-                String password = params.get(UserField.PASSWORD.getValue());
-
-                // MemoryUserRepository에서 사용자 조회
-                MemoryUserRepository repository = MemoryUserRepository.getInstance();
-                User user = repository.findUserById(userId);
-
-                // 인증 검증
-                if (user != null && user.getPassword().equals(password)) {
-                    // 로그인 성공: Cookie 설정 + 메인페이지로 리다이렉트
-                    log.log(Level.INFO, "Login successful: " + userId);
-                    httpResponse.redirectWithCookie(RequestPath.INDEX.getValue(), "logined=true");
-                    return;
-                } else {
-                    // 로그인 실패: 에러페이지로 리다이렉트
-                    log.log(Level.WARNING, "Login failed: " + userId);
-                    httpResponse.redirect(RequestPath.USER_LOGIN_FAILED.getValue());
-                    return;
-                }
+                UserLoginController controller = new UserLoginController();
+                controller.execute(httpRequest, httpResponse);
+                return;
             }
 
             // userList 경로 처리
