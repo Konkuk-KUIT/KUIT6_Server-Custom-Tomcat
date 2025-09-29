@@ -2,6 +2,9 @@ package webserver;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,9 +23,38 @@ public class RequestHandler implements Runnable{
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             DataOutputStream dos = new DataOutputStream(out);
 
-            byte[] body = "Hello World".getBytes();
-            response200Header(dos, body.length);
+            String request = br.readLine();
+            if(request == null) {
+                return;
+            }
+            log.info("Request: " + request);
+            String[] tokens = request.split(" ");
+            String url = tokens[1];
+
+            if (url.equals("/")) {
+                url = "/index.html";
+            }
+
+            Path filePath = Paths.get("./webapp" + url);
+            byte[] body;
+
+            if (Files.exists(filePath) && !Files.isDirectory(filePath)) {
+                // 파일이 존재하면 파일 내용을 읽어옵니다.
+                body = Files.readAllBytes(filePath);
+                // 200 OK 응답 헤더를 작성합니다.
+                response200Header(dos, body.length);
+            } else {
+                // 파일이 존재하지 않으면 404 Not Found 응답을 보냅니다.
+                body = "404 Not Found".getBytes();
+                // 404 Not Found 응답 헤더를 작성합니다.
+            }
+
             responseBody(dos, body);
+
+
+//            byte[] body = "Hello World".getBytes();
+//            response200Header(dos, body.length);
+//            responseBody(dos, body);
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
