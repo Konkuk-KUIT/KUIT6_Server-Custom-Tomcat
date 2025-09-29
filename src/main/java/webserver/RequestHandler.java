@@ -6,8 +6,12 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Map;
 
+import db.MemoryUserRepository;
 import http.util.IOUtils;
+import http.util.HttpRequestUtils;
+import model.User;
 
 public class RequestHandler implements Runnable{
     Socket connection;
@@ -48,9 +52,12 @@ public class RequestHandler implements Runnable{
 
             // 쿼리 파라미터 제거 (예: /user/form.html?name=john -> /user/form.html
             String path = fullPath;
+            String queryString = null;
             if (fullPath.contains("?")) {
                 path = fullPath.substring(0, fullPath.indexOf("?"));
+                queryString = fullPath.substring(fullPath.indexOf("?") + 1);
             }
+            log.log(Level.INFO, "Path: " + path + ", Query String: " + queryString);
             log.log(Level.INFO, "Method: " + method + ", Path: " + path + ", Version: " + httpVersion);
 
             // HTTP 헤더들 읽기 (빈 라인까지)
@@ -65,7 +72,7 @@ public class RequestHandler implements Runnable{
                 }
             }
             log.log(Level.INFO, "Headers read complete. Content-Length: " + contentLength);
-            
+
             // POST 요청의 바디 데이터 읽기
             String requestBody = null;
             if ("POST".equals(method) && contentLength > 0) {
@@ -74,6 +81,30 @@ public class RequestHandler implements Runnable{
             }
 
             // 경로에 따른 파일 매핑 로직
+            // 회원 가입 처리
+            if (path.equals("/user/signup") && queryString != null) {
+                // queryString parsing
+                Map<String, String> params = HttpRequestUtils.parseQueryParameter(queryString);
+                log.log(Level.INFO, "Signup params: " + params);
+
+                // User 객체 생성
+                User newUser = new User(
+                        params.get("userId"),
+                        params.get("password"),
+                        params.get("name"),
+                        params.get("email")
+                );
+
+                // 메모리 저장소에 저장
+                MemoryUserRepository repository = MemoryUserRepository.getInstance();
+                repository.addUser(newUser);
+                log.log(Level.INFO, "New User Registered: " + newUser.getUserId());
+
+                // 302 리다이렉트로 메인 페이지로 이동
+                response302Header(dos);
+                return;
+            }
+
             // 1. 루트 경로 ("/") 처리 - 기본 페이지로 리다이렉트
             if (path.equals("/")) {
                 path = "/index.html";
@@ -124,10 +155,10 @@ public class RequestHandler implements Runnable{
         }
     }
 
-    private void response302Header(DataOutputStream dos, String redirectPath) {
+    private void response302Header(DataOutputStream dos) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + redirectPath + "\r\n");
+            dos.writeBytes("Location: " + "/index.html" + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
