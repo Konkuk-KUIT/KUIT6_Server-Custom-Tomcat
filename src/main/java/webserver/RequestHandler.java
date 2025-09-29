@@ -1,6 +1,7 @@
 package webserver;
 
 import db.MemoryUserRepository;
+import http.util.IOUtils;
 import model.User;
 
 import java.io.*;
@@ -39,19 +40,42 @@ public class RequestHandler implements Runnable{
             if (url.equals("/")) {
                 url = "/index.html";
             }
-            else if (url.startsWith("/user/signup")) {
-                String queryParams = url.split("\\?")[1];
-                String [] queryParamArr = queryParams.split("&");
+//            else if (url.startsWith("/user/signup")) {
+//                String queryParams = url.split("\\?")[1];
+//                String [] queryParamArr = queryParams.split("&");
+//                String userId = queryParamArr[0].split("=")[1];
+//                String userPw = queryParamArr[1].split("=")[1];
+//                String userName = queryParamArr[2].split("=")[1];
+//                String userEmail = queryParamArr[3].split("=")[1];
+//                User user = new User(userId, userPw, userName, userEmail);
+//                memoryUserRepository.addUser(user);
+//                log.info("Query Params: " + queryParams);
+//                response302Header(dos, "/index.html");
+//                return;
+//
+//            }
+            if(url.equals("/user/signup")) {
+                int contentLength = 0;
+                while (true) {
+                    final String line = br.readLine();
+                    if (line.equals("")) {
+                        break;
+                    }
+                    // header info
+                    if (line.startsWith("Content-Length")) {
+                        contentLength = Integer.parseInt(line.split(": ")[1]);
+                    }
+                }
+                String body = IOUtils.readData(br, contentLength);
+                String[] queryParamArr = body.split("&");
                 String userId = queryParamArr[0].split("=")[1];
                 String userPw = queryParamArr[1].split("=")[1];
                 String userName = queryParamArr[2].split("=")[1];
                 String userEmail = queryParamArr[3].split("=")[1];
                 User user = new User(userId, userPw, userName, userEmail);
                 memoryUserRepository.addUser(user);
-                log.info("Query Params: " + queryParams);
                 response302Header(dos, "/index.html");
                 return;
-
             }
 
 
