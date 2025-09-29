@@ -9,8 +9,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import db.MemoryUserRepository;
-import http.util.IOUtils;
 import http.util.HttpRequestUtils;
+import http.HttpRequest;
 import model.User;
 import http.enums.HttpMethod;
 import http.enums.HttpHeader;
@@ -31,66 +31,24 @@ public class RequestHandler implements Runnable{
     public void run() {
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
-            BufferedReader br = new BufferedReader(new InputStreamReader(in)); // 라인 단위 읽기 기능 추가
-            DataOutputStream dos = new DataOutputStream(out); // 바이트 단위 쓰기 기능 추가
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            DataOutputStream dos = new DataOutputStream(out);
 
-            // HTTP 요청 라인 읽기 -> etc: "GET /index.html HTTP/1.1"
-            String requestLine = br.readLine();
-            log.log(Level.INFO, "Request Line: " + requestLine);
+            // HttpRequest 객체로 HTTP 요청 파싱
+            HttpRequest httpRequest = HttpRequest.from(br);
+            log.log(Level.INFO, "Request Line: " + httpRequest.getMethod() + " " + httpRequest.getPath() + " " + httpRequest.getVersion());
 
-            // 요청 라인이 비어있으면 연결 종료
-            if (requestLine == null || requestLine.isEmpty()) {
-                return;
+            String method = httpRequest.getMethod().getValue();
+            String path = httpRequest.getPath();
+            String queryString = httpRequest.getQueryString();
+            String cookieValue = httpRequest.getCookie();
+            String requestBody = httpRequest.getBody();
+
+            log.log(Level.INFO, "Method: " + method + ", Path: " + path + ", Query String: " + queryString);
+            if (cookieValue != null) {
+                log.log(Level.INFO, "Cookie received: " + cookieValue);
             }
-
-            // HTTP 요청 라인을 공백으로 분리
-            // parts[0]: HTTP 메서드 (GET, POST 등)
-            // parts[1]: 요청 경로 (/index.html, /users/form.html +..)
-            // parts[2]: HTTP 버전 (HTTP/3)
-            String[]  requestParts = requestLine.split(" ");
-            if (requestParts.length != 3) {
-                log.log(Level.WARNING, "Invalid Request Line: " + requestLine);
-            }
-
-            String method = requestParts[0];
-            String fullPath = requestParts[1];
-            String httpVersion = requestParts[2];
-
-            // 쿼리 파라미터 제거 (예: /user/form.html?name=john -> /user/form.html
-            String path = fullPath;
-            String queryString = null;
-            if (fullPath.contains("?")) {
-                path = fullPath.substring(0, fullPath.indexOf("?"));
-                queryString = fullPath.substring(fullPath.indexOf("?") + 1);
-            }
-            log.log(Level.INFO, "Path: " + path + ", Query String: " + queryString);
-            log.log(Level.INFO, "Method: " + method + ", Path: " + path + ", Version: " + httpVersion);
-
-            // HTTP 헤더들 읽기 (빈 라인까지)
-            int requestContentLength = 0;
-            String cookieValue = null;
-
-            while (true) {
-                final String line = br.readLine();
-                if (line.equals("")) {
-                    break;
-                }
-                // header info
-                if (line.startsWith(HttpHeader.CONTENT_LENGTH.getValue())) {
-                    requestContentLength = Integer.parseInt(line.split(": ")[1]);
-                }
-                // Cookie parsing
-                if (line.startsWith(HttpHeader.COOKIE.getValue())) {
-                    cookieValue = line.split(": ")[1];
-                    log.log(Level.INFO, "Cookie received: " + cookieValue);
-                }
-            }
-            log.log(Level.INFO, "Headers read complete. Content-Length: " + requestContentLength);
-
-            // POST 요청의 바디 데이터 읽기
-            String requestBody = null;
-            if (HttpMethod.POST.getValue().equals(method) && requestContentLength > 0) {
-                requestBody = IOUtils.readData(br, requestContentLength);
+            if (requestBody != null) {
                 log.log(Level.INFO, "Request body: " + requestBody);
             }
 
