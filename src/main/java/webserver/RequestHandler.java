@@ -62,6 +62,8 @@ public class RequestHandler implements Runnable{
 
             // HTTP 헤더들 읽기 (빈 라인까지)
             int requestContentLength = 0;
+            String cookieValue = null;
+
             while (true) {
                 final String line = br.readLine();
                 if (line.equals("")) {
@@ -70,6 +72,11 @@ public class RequestHandler implements Runnable{
                 // header info
                 if (line.startsWith("Content-Length")) {
                     requestContentLength = Integer.parseInt(line.split(": ")[1]);
+                }
+                // Cookie parsing
+                if (line.startsWith("Cookie")) {
+                    cookieValue = line.split(": ")[1];
+                    log.log(Level.INFO, "Cookie received: " + cookieValue);
                 }
             }
             log.log(Level.INFO, "Headers read complete. Content-Length: " + requestContentLength);
@@ -138,6 +145,19 @@ public class RequestHandler implements Runnable{
                     // 로그인 실패: 에러페이지로 리다이렉트
                     log.log(Level.WARNING, "Login failed: " + userId);
                     response302Header(dos, "/user/login_failed.html");
+                    return;
+                }
+            }
+
+            // userList 경로 처리
+            if (path.equals("/user/userList")) {
+                // Cookie 에서 로그인 상태 확인
+                if (cookieValue != null && cookieValue.contains("logined=true")) {
+                    // user/list.html 파일
+                    path = "/user/list.html";
+                } else {
+                    // 비로그인 상태
+                    response302Header(dos, "/user/login.html");
                     return;
                 }
             }
