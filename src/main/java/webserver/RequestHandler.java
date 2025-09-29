@@ -61,22 +61,23 @@ public class RequestHandler implements Runnable{
             log.log(Level.INFO, "Method: " + method + ", Path: " + path + ", Version: " + httpVersion);
 
             // HTTP 헤더들 읽기 (빈 라인까지)
-            String headerLine;
-            int contentLength = 0;
-            while ((headerLine = br.readLine()) != null && !headerLine.isEmpty()) {
-                log.log(Level.INFO, "Header: " + headerLine);
-                
-                // Content-Length 헤더 파싱
-                if (headerLine.startsWith("Content-Length:")) {
-                    contentLength = Integer.parseInt(headerLine.substring(15).trim());
+            int requestContentLength = 0;
+            while (true) {
+                final String line = br.readLine();
+                if (line.equals("")) {
+                    break;
+                }
+                // header info
+                if (line.startsWith("Content-Length")) {
+                    requestContentLength = Integer.parseInt(line.split(": ")[1]);
                 }
             }
-            log.log(Level.INFO, "Headers read complete. Content-Length: " + contentLength);
+            log.log(Level.INFO, "Headers read complete. Content-Length: " + requestContentLength);
 
             // POST 요청의 바디 데이터 읽기
             String requestBody = null;
-            if ("POST".equals(method) && contentLength > 0) {
-                requestBody = IOUtils.readData(br, contentLength);
+            if ("POST".equals(method) && requestContentLength > 0) {
+                requestBody = IOUtils.readData(br, requestContentLength);
                 log.log(Level.INFO, "Request body: " + requestBody);
             }
 
