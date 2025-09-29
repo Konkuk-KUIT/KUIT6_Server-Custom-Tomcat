@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 import controller.UserSignupController;
 import controller.UserLoginController;
 import controller.UserListController;
+import controller.StaticFileController;
 import http.HttpRequest;
 import http.HttpResponse;
 import http.enums.HttpMethod;
@@ -71,28 +72,9 @@ public class RequestHandler implements Runnable{
                 return;
             }
 
-            // 1. 루트 경로 ("/") 처리 - 기본 페이지로 리다이렉트
-            if (path.equals(RequestPath.ROOT.getValue())) {
-                path = RequestPath.INDEX.getValue();
-            }
-
-            // 2. 보안 검증 - ../ 과 같은 디렉토리 traversal 공격 방지
-            if (path.contains("..")) {
-                log.log(Level.WARNING, "Path contains invalid path: " + path);
-                // TODO: 에러 반환
-                return;
-            }
-
-            try {
-                // 3. 파일 forward
-                httpResponse.forward(path);
-                log.log(Level.INFO, "File forwarded successfully: " + path);
-
-            } catch (IOException fileException) {
-                // 4. 파일이 없거나 읽기 실패시 404 에러 응답
-                log.log(Level.WARNING, "File not found or read error: " + path);
-                httpResponse.notFound();
-            }
+            // 정적 파일 처리 (모든 나머지 요청)
+            StaticFileController controller = new StaticFileController();
+            controller.execute(httpRequest, httpResponse);
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
