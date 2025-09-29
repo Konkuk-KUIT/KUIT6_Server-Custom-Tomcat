@@ -184,7 +184,8 @@ public class RequestHandler implements Runnable{
                 log.log(Level.INFO, "File read successfully: " + filePath);
                 
                 // 5. 성공적으로 읽었으면 200 OK 응답
-                response200Header(dos, fileContent.length);
+                String contentType = getContentType(filePath);
+                response200Header(dos, fileContent.length, contentType);
                 responseBody(dos, fileContent);
                 
             } catch (IOException fileException) {
@@ -192,7 +193,8 @@ public class RequestHandler implements Runnable{
                 log.log(Level.WARNING, "File not found or read error: " + filePath);
                 // TODO: 404 에러 응답 구현
                 byte[] errorBody = "404 Not Found".getBytes();
-                response200Header(dos, errorBody.length);
+
+                response200Header(dos, errorBody.length, "text/html;charset=utf-8");
                 responseBody(dos, errorBody);
             }
 
@@ -201,10 +203,10 @@ public class RequestHandler implements Runnable{
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Type: " + contentType + "\r\n");  // 동적 설정
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -230,6 +232,22 @@ public class RequestHandler implements Runnable{
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private String getContentType(String filePath) {
+        if (filePath.endsWith(".css")) {
+            return "text/css";
+        } else if (filePath.endsWith(".js")) {
+            return "application/javascript";
+        } else if (filePath.endsWith(".png")) {
+            return "image/png";
+        } else if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) {
+            return "image/jpeg";
+        } else if (filePath.endsWith(".html")) {
+            return "text/html;charset=utf-8";
+        } else {
+            return "text/html;charset=utf-8"; // default
         }
     }
 
