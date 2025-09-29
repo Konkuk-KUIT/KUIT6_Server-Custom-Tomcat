@@ -8,15 +8,13 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import controller.UserSignupController;
 import db.MemoryUserRepository;
 import http.util.HttpRequestUtils;
 import http.HttpRequest;
 import http.HttpResponse;
 import model.User;
 import http.enums.HttpMethod;
-import http.enums.HttpHeader;
-import http.enums.HttpStatus;
-import http.enums.ContentType;
 import http.enums.RequestPath;
 import model.UserField;
 
@@ -55,35 +53,9 @@ public class RequestHandler implements Runnable{
 
             // 경로에 따른 파일 매핑 로직
             // 회원 가입 처리
-            if (path.equals(RequestPath.USER_SIGNUP.getValue()) && (queryString != null || HttpMethod.POST.getValue().equals(method))) {
-                // queryString parsing
-                Map<String, String> params;
-
-                if (HttpMethod.POST.getValue().equals(method)) {
-                    // body에서 파라미터 추출
-                    params = HttpRequestUtils.parseQueryParameter(requestBody);
-                    log.log(Level.INFO, "POST Signup params: " + params);
-                } else {
-                    // GET에서 파라미터 추출
-                    params = HttpRequestUtils.parseQueryParameter(queryString);
-                    log.log(Level.INFO, "GET Signup params: " + params);
-                }
-
-                // User 객체 생성
-                User newUser = new User(
-                        params.get(UserField.USER_ID.getValue()),
-                        params.get(UserField.PASSWORD.getValue()),
-                        params.get(UserField.NAME.getValue()),
-                        params.get(UserField.EMAIL.getValue())
-                );
-
-                // 메모리 저장소에 저장
-                MemoryUserRepository repository = MemoryUserRepository.getInstance();
-                repository.addUser(newUser);
-                log.log(Level.INFO, "New User Registered: " + newUser.getUserId());
-
-                // 302 리다이렉트로 메인 페이지로 이동
-                httpResponse.redirect(RequestPath.INDEX.getValue());
+            if (path.equals(RequestPath.USER_SIGNUP.getValue()) && HttpMethod.POST.getValue().equals(method)) {
+                UserSignupController controller = new UserSignupController();
+                controller.execute(httpRequest, httpResponse);
                 return;
             }
 
