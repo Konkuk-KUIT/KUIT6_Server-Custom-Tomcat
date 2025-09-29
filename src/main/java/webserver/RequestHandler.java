@@ -82,10 +82,19 @@ public class RequestHandler implements Runnable{
 
             // 경로에 따른 파일 매핑 로직
             // 회원 가입 처리
-            if (path.equals("/user/signup") && queryString != null) {
+            if (path.equals("/user/signup") && (queryString != null || "POST".equals(method))) {
                 // queryString parsing
-                Map<String, String> params = HttpRequestUtils.parseQueryParameter(queryString);
-                log.log(Level.INFO, "Signup params: " + params);
+                Map<String, String> params;
+
+                if ("POST".equals(method)) {
+                    // body에서 파라미터 추출
+                    params = HttpRequestUtils.parseQueryParameter(requestBody);
+                    log.log(Level.INFO, "POST Signup params: " + params);
+                } else {
+                    // GET에서 파라미터 추출
+                    params = HttpRequestUtils.parseQueryParameter(queryString);
+                    log.log(Level.INFO, "GET Signup params: " + params);
+                }
 
                 // User 객체 생성
                 User newUser = new User(
