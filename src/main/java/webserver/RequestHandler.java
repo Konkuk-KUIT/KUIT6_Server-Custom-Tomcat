@@ -111,8 +111,35 @@ public class RequestHandler implements Runnable{
                 log.log(Level.INFO, "New User Registered: " + newUser.getUserId());
 
                 // 302 리다이렉트로 메인 페이지로 이동
-                response302Header(dos);
+                response302Header(dos, "/index.html");
                 return;
+            }
+
+            // 로그인 처리
+            if (path.equals("/user/login") && "POST".equals(method)) {
+                // POST 방식의 로그인만 처리
+                Map<String, String> params = HttpRequestUtils.parseQueryParameter(requestBody);
+                log.log(Level.INFO, "Login params: " + params);
+
+                String userId = params.get("userId");
+                String password = params.get("password");
+
+                // MemoryUserRepository에서 사용자 조회
+                MemoryUserRepository repository = MemoryUserRepository.getInstance();
+                User user = repository.findUserById(userId);
+
+                // 인증 검증
+                if (user != null && user.getPassword().equals(password)) {
+                    // 로그인 성공: Cookie 설정 + 메인페이지로 리다이렉트
+                    log.log(Level.INFO, "Login successful: " + userId);
+                    response302HeaderWithCookie(dos, "/index.html", "logined=true");
+                    return;
+                } else {
+                    // 로그인 실패: 에러페이지로 리다이렉트
+                    log.log(Level.WARNING, "Login failed: " + userId);
+                    response302Header(dos, "/user/login_failed.html");
+                    return;
+                }
             }
 
             // 1. 루트 경로 ("/") 처리 - 기본 페이지로 리다이렉트
@@ -165,10 +192,21 @@ public class RequestHandler implements Runnable{
         }
     }
 
-    private void response302Header(DataOutputStream dos) {
+    private void response302Header(DataOutputStream dos, String redirectPath) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + "/index.html" + "\r\n");
+            dos.writeBytes("Location: " + redirectPath + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private void response302HeaderWithCookie(DataOutputStream dos, String redirectPath, String cookieValue) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found\r\n");
+            dos.writeBytes("Set-Cookie: " + cookieValue + "\r\n");
+            dos.writeBytes("Location: " + redirectPath + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
