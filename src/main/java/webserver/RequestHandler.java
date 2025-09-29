@@ -96,10 +96,27 @@ public class RequestHandler implements Runnable{
                 String userPw = queryParamArr[1].split("=")[1];
                 User user = memoryUserRepository.findUserById(userId);
                 if(user != null && userPw.equals(user.getPassword())) {
-                    response302Header(dos, "/index.html", "logined=true");
+                    response302Header(dos, "/index.html", "logined=true; Path=/; HttpOnly");
                     return;
                 }
                 response302Header(dos, "/user/login_failed.html");
+                return;
+            }
+
+            if(url.equals("/user/userlist")) {
+                String cookieHeader = null;
+                String line;
+                while ((line = br.readLine()) != null && !line.isEmpty()) {
+                    if (line.startsWith("Cookie:")) {
+                        cookieHeader = line.substring("Cookie:".length()).trim();
+                    }
+                }
+                if(cookieHeader != null && cookieHeader.contains("logined=true")) {
+                    memoryUserRepository.findAll().forEach(user -> log.info("USER:" + user.toString()));
+                    response302Header(dos, "/user/list.html");
+                    return;
+                }
+                response302Header(dos, "/index.html");
                 return;
             }
 
@@ -154,7 +171,6 @@ public class RequestHandler implements Runnable{
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Location: " + path + "\r\n");
-            dos.writeBytes("\r\n");
             if (setCookie != null && !setCookie.isEmpty()) {
                 dos.writeBytes("Set-Cookie: " + setCookie + "\r\n");
             }
