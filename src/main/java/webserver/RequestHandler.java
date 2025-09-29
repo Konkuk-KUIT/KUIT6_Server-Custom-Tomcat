@@ -4,14 +4,20 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.Map;
 
 import db.MemoryUserRepository;
 import http.util.IOUtils;
 import http.util.HttpRequestUtils;
 import model.User;
+import http.enums.HttpMethod;
+import http.enums.HttpHeader;
+import http.enums.HttpStatus;
+import http.enums.ContentType;
+import http.enums.RequestPath;
+import model.UserField;
 
 public class RequestHandler implements Runnable{
     Socket connection;
@@ -70,11 +76,11 @@ public class RequestHandler implements Runnable{
                     break;
                 }
                 // header info
-                if (line.startsWith("Content-Length")) {
+                if (line.startsWith(HttpHeader.CONTENT_LENGTH.getValue())) {
                     requestContentLength = Integer.parseInt(line.split(": ")[1]);
                 }
                 // Cookie parsing
-                if (line.startsWith("Cookie")) {
+                if (line.startsWith(HttpHeader.COOKIE.getValue())) {
                     cookieValue = line.split(": ")[1];
                     log.log(Level.INFO, "Cookie received: " + cookieValue);
                 }
@@ -83,18 +89,18 @@ public class RequestHandler implements Runnable{
 
             // POST 요청의 바디 데이터 읽기
             String requestBody = null;
-            if ("POST".equals(method) && requestContentLength > 0) {
+            if (HttpMethod.POST.getValue().equals(method) && requestContentLength > 0) {
                 requestBody = IOUtils.readData(br, requestContentLength);
                 log.log(Level.INFO, "Request body: " + requestBody);
             }
 
             // 경로에 따른 파일 매핑 로직
             // 회원 가입 처리
-            if (path.equals("/user/signup") && (queryString != null || "POST".equals(method))) {
+            if (path.equals(RequestPath.USER_SIGNUP.getValue()) && (queryString != null || HttpMethod.POST.getValue().equals(method))) {
                 // queryString parsing
                 Map<String, String> params;
 
-                if ("POST".equals(method)) {
+                if (HttpMethod.POST.getValue().equals(method)) {
                     // body에서 파라미터 추출
                     params = HttpRequestUtils.parseQueryParameter(requestBody);
                     log.log(Level.INFO, "POST Signup params: " + params);
@@ -106,10 +112,10 @@ public class RequestHandler implements Runnable{
 
                 // User 객체 생성
                 User newUser = new User(
-                        params.get("userId"),
-                        params.get("password"),
-                        params.get("name"),
-                        params.get("email")
+                        params.get(UserField.USER_ID.getValue()),
+                        params.get(UserField.PASSWORD.getValue()),
+                        params.get(UserField.NAME.getValue()),
+                        params.get(UserField.EMAIL.getValue())
                 );
 
                 // 메모리 저장소에 저장
@@ -118,18 +124,18 @@ public class RequestHandler implements Runnable{
                 log.log(Level.INFO, "New User Registered: " + newUser.getUserId());
 
                 // 302 리다이렉트로 메인 페이지로 이동
-                response302Header(dos, "/index.html");
+                response302Header(dos, RequestPath.INDEX.getValue());
                 return;
             }
 
             // 로그인 처리
-            if (path.equals("/user/login") && "POST".equals(method)) {
+            if (path.equals(RequestPath.USER_LOGIN.getValue()) && HttpMethod.POST.getValue().equals(method)) {
                 // POST 방식의 로그인만 처리
                 Map<String, String> params = HttpRequestUtils.parseQueryParameter(requestBody);
                 log.log(Level.INFO, "Login params: " + params);
 
-                String userId = params.get("userId");
-                String password = params.get("password");
+                String userId = params.get(UserField.USER_ID.getValue());
+                String password = params.get(UserField.PASSWORD.getValue());
 
                 // MemoryUserRepository에서 사용자 조회
                 MemoryUserRepository repository = MemoryUserRepository.getInstance();
@@ -139,32 +145,32 @@ public class RequestHandler implements Runnable{
                 if (user != null && user.getPassword().equals(password)) {
                     // 로그인 성공: Cookie 설정 + 메인페이지로 리다이렉트
                     log.log(Level.INFO, "Login successful: " + userId);
-                    response302HeaderWithCookie(dos, "/index.html", "logined=true");
+                    response302HeaderWithCookie(dos, RequestPath.INDEX.getValue(), "logined=true");
                     return;
                 } else {
                     // 로그인 실패: 에러페이지로 리다이렉트
                     log.log(Level.WARNING, "Login failed: " + userId);
-                    response302Header(dos, "/user/login_failed.html");
+                    response302Header(dos, RequestPath.USER_LOGIN_FAILED.getValue());
                     return;
                 }
             }
 
             // userList 경로 처리
-            if (path.equals("/user/userList")) {
+            if (path.equals(RequestPath.USER_LIST.getValue())) {
                 // Cookie 에서 로그인 상태 확인
                 if (cookieValue != null && cookieValue.contains("logined=true")) {
                     // user/list.html 파일
-                    path = "/user/list.html";
+                    path = RequestPath.USER_LIST_HTML.getValue();
                 } else {
                     // 비로그인 상태
-                    response302Header(dos, "/user/login.html");
+                    response302Header(dos, RequestPath.USER_LOGIN_HTML.getValue());
                     return;
                 }
             }
 
             // 1. 루트 경로 ("/") 처리 - 기본 페이지로 리다이렉트
-            if (path.equals("/")) {
-                path = "/index.html";
+            if (path.equals(RequestPath.ROOT.getValue())) {
+                path = RequestPath.INDEX.getValue();
             }
 
             // 2. 보안 검증 - ../ 과 같은 디렉토리 traversal 공격 방지
@@ -182,19 +188,19 @@ public class RequestHandler implements Runnable{
                 // 4. 파일 존재 여부 확인 및 읽기
                 byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
                 log.log(Level.INFO, "File read successfully: " + filePath);
-                
+
                 // 5. 성공적으로 읽었으면 200 OK 응답
                 String contentType = getContentType(filePath);
                 response200Header(dos, fileContent.length, contentType);
                 responseBody(dos, fileContent);
-                
+
             } catch (IOException fileException) {
                 // 6. 파일이 없거나 읽기 실패시 로그 기록
                 log.log(Level.WARNING, "File not found or read error: " + filePath);
                 // TODO: 404 에러 응답 구현
                 byte[] errorBody = "404 Not Found".getBytes();
 
-                response200Header(dos, errorBody.length, "text/html;charset=utf-8");
+                response200Header(dos, errorBody.length, ContentType.TEXT_HTML.getValue());
                 responseBody(dos, errorBody);
             }
 
@@ -205,9 +211,9 @@ public class RequestHandler implements Runnable{
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: " + contentType + "\r\n");  // 동적 설정
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes(HttpStatus.OK.getStatusLine() + " \r\n");
+            dos.writeBytes(HttpHeader.CONTENT_TYPE.getValue() + ": " + contentType + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH.getValue() + ": " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -216,8 +222,8 @@ public class RequestHandler implements Runnable{
 
     private void response302Header(DataOutputStream dos, String redirectPath) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + redirectPath + "\r\n");
+            dos.writeBytes(HttpStatus.FOUND.getStatusLine() + "\r\n");
+            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + redirectPath + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -226,9 +232,9 @@ public class RequestHandler implements Runnable{
 
     private void response302HeaderWithCookie(DataOutputStream dos, String redirectPath, String cookieValue) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Set-Cookie: " + cookieValue + "\r\n");
-            dos.writeBytes("Location: " + redirectPath + "\r\n");
+            dos.writeBytes(HttpStatus.FOUND.getStatusLine() + "\r\n");
+            dos.writeBytes(HttpHeader.SET_COOKIE.getValue() + ": " + cookieValue + "\r\n");
+            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + redirectPath + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -236,19 +242,7 @@ public class RequestHandler implements Runnable{
     }
 
     private String getContentType(String filePath) {
-        if (filePath.endsWith(".css")) {
-            return "text/css";
-        } else if (filePath.endsWith(".js")) {
-            return "application/javascript";
-        } else if (filePath.endsWith(".png")) {
-            return "image/png";
-        } else if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) {
-            return "image/jpeg";
-        } else if (filePath.endsWith(".html")) {
-            return "text/html;charset=utf-8";
-        } else {
-            return "text/html;charset=utf-8"; // default
-        }
+        return ContentType.fromFileExtension(filePath).getValue();
     }
 
     private void responseBody(DataOutputStream dos, byte[] body) {
@@ -259,5 +253,4 @@ public class RequestHandler implements Runnable{
             log.log(Level.SEVERE, e.getMessage());
         }
     }
-
 }
