@@ -17,7 +17,7 @@ public class User {
     }
 
     public static User factory(Map<String, String> userInfoMap) {
-         return new User(userInfoMap.get("nameId"), userInfoMap.get("password"), userInfoMap.get("name"),  userInfoMap.get("email"));
+         return new User(userInfoMap.get("userId"), userInfoMap.get("password"), userInfoMap.get("name"),  userInfoMap.get("email"));
     }
 
     public String getUserId() {
@@ -34,6 +34,10 @@ public class User {
 
     public String getEmail() {
         return email;
+    }
+
+    public boolean isLogin(String id, String password) {
+        return this.userId.equals(id) && this.password.equals(password);
     }
 
     @Override
