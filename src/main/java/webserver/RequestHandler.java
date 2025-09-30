@@ -2,6 +2,8 @@ package webserver;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,7 +22,37 @@ public class RequestHandler implements Runnable{
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             DataOutputStream dos = new DataOutputStream(out);
 
-            byte[] body = "Hello World".getBytes();
+            String reqHeaderFirstLine = br.readLine();
+            String[] tokens = reqHeaderFirstLine.split(" ");
+            String filePath;
+
+            System.out.println(reqHeaderFirstLine);
+
+            switch (tokens[1]) {
+                case "/qna/form.html":
+                    filePath = "webapp/qna/form.html";
+                    break;
+                case "/qna/show.html":
+                    filePath = "webapp/qna/show.html";
+                    break;
+                case "/user/form.html":
+                    filePath = "webapp/user/form.html";
+                    break;
+                case "/user/list.html":
+                    filePath = "webapp/user/list.html";
+                    break;
+                case "/user/login.html":
+                    filePath = "webapp/user/login.html";
+                    break;
+                case "/user/login_failed.html":
+                    filePath = "webapp/user/login_failed.html";
+                    break;
+                default:
+                    filePath = "webapp/index.html";
+                    break;
+            }
+            System.out.println(filePath);
+            byte[] body = Files.readAllBytes(Paths.get(filePath));
             response200Header(dos, body.length);
             responseBody(dos, body);
 
