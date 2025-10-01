@@ -25,4 +25,5 @@ class HttpRequestUtilsTest {
     void parseQueryZero() {
         Map<String, String> queryParameter = HttpRequestUtils.parseQueryParameter("");
     }
+
 }

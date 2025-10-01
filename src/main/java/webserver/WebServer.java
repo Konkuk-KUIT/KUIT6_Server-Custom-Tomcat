@@ -14,9 +14,10 @@ public class WebServer {
 
     public static void main(String[] args) throws IOException {
         int port = DEFAULT_PORT;
+        //쓰레드 풀로 관리하는 거! 기본 50개를 설정했다고 볼 수 있음
         ExecutorService service = Executors.newFixedThreadPool(DEFAULT_THREAD_NUM);
 
-        if (args.length != 0) {
+        if (args.length != 0) {//만약 port를 설정한다면 그걸로 하고 아니면 기본 포트 80으로
             port = Integer.parseInt(args[0]);
         }
 
