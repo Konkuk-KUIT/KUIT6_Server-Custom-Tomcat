@@ -17,7 +17,7 @@ public class User {
     }
 
     public static User factory(Map<String, String> userInfoMap) {
-         return new User(userInfoMap.get("userId"), userInfoMap.get("password"), userInfoMap.get("name"),  userInfoMap.get("email"));
+         return new User(userInfoMap.get(QueryKey.userId.name()), userInfoMap.get(QueryKey.password.name()), userInfoMap.get(QueryKey.name.name()),  userInfoMap.get(QueryKey.email.name()));
     }
 
     public String getUserId() {
