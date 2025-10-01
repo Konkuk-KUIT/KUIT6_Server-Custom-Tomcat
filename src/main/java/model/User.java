@@ -34,13 +34,14 @@ public class User {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) return false;      // getClass(): 해당 객체가 어떤 클래스인지 나타내는 Class 객체를 반환
         User user = (User) o;
         return Objects.equals(getUserId(), user.getUserId()) && Objects.equals(getPassword(), user.getPassword()) && Objects.equals(getName(), user.getName()) && Objects.equals(getEmail(), user.getEmail());
     }
 
-    @Override
+    @Override       // hashcode: 객체를 식별하기 위한 정수 값 => 객체를 숫자로 변환한 대표값
     public int hashCode() {
         return Objects.hash(getUserId(), getPassword(), getName(), getEmail());
     }
+
 }
