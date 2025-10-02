@@ -17,4 +17,17 @@ public class HttpRequestUtils {
             return new HashMap<>();
         }
     }
+    public static Map<String, String> parseCookies(String cookieValue) {
+        Map<String, String> cookies = new HashMap<>();
+        if (cookieValue == null || cookieValue.isEmpty()) return cookies;
+
+        String[] pairs = cookieValue.split(";");
+        for (String pair : pairs) {
+            String[] keyValue = pair.trim().split("=");
+            if (keyValue.length == 2) {
+                cookies.put(keyValue[0], keyValue[1]);
+            }
+        }
+        return cookies;
+    }
 }

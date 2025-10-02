@@ -8,6 +8,7 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,6 +20,7 @@ public class RequestHandler implements Runnable{
     public RequestHandler(Socket connection) {
         this.connection = connection;
     }
+
 
     @Override
     public void run() {
@@ -38,6 +40,7 @@ public class RequestHandler implements Runnable{
             String line;
             while (true) {
                 line = br.readLine();
+                System.out.println(line);
                 if (line == null || line.equals("")) break;
 
                 if (line.startsWith("Content-Length")) {
@@ -45,11 +48,13 @@ public class RequestHandler implements Runnable{
                 }
 
                 if (line.startsWith("Cookie")) {
-                    Map<String, String> cookies = HttpRequestUtils.parseQueryParameter(line);
+                    String cookieHeader = line.substring("Cookie: ".length()).trim();
+
+                    Map<String, String> cookies = HttpRequestUtils.parseCookies(cookieHeader);
                     System.out.print("쿠키야");
                     System.out.println(cookies);
                     String loginCookie = cookies.get("logined");
-
+                    System.out.println(loginCookie);
                     if ("true".equals(loginCookie)) {
                         isLogin = true;
                     }
@@ -121,9 +126,15 @@ public class RequestHandler implements Runnable{
                 }
             }else if (path.equals("/user/userList")) {
                 // 자 여긴 만약에 했을때임
-
-                //여긴 못햇을때
-                response302Header(dos, "/user/login.html");
+                if(isLogin){
+                    byte[] body = Files.readAllBytes(Paths.get("./webapp/user/list.html"));
+                    response200Header(dos, body);
+                    responseBody(dos, body);
+                    System.out.println("아니 성공은 했딴다");
+                }else{
+                    response302Header(dos, "/user/login.html");
+                    System.out.println("넌 실패했어");
+                }
 
             }
 
@@ -175,4 +186,5 @@ public class RequestHandler implements Runnable{
             log.log(Level.SEVERE, e.getMessage());
         }
     }
+
 }
