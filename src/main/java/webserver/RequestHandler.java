@@ -31,21 +31,23 @@ public class RequestHandler implements Runnable {
             DataOutputStream dos = new DataOutputStream(out);
 
             String request = br.readLine();
-//            요청 url에서 파일 경로를 추출한다
-//            그 경로에 따라 반환해주면 요구사항 1 끝이다
             if (request == null || request.isEmpty()) {
                 return;
             }
             //request :HTTPMethod Request-URL HTTPVersion
             String path = extractPath(request);
-            int contentLength = 0;
-            if (request.contains("Content-Length")) {
-                contentLength = getContentLength(request);
-            }
-
             if (path.equals("/")) {
                 path = "/index.html";
             }
+
+            int contentLength = 0;
+            while(!request.equals("")){
+                if (request.contains("Content-Length")) {
+                    contentLength = getContentLength(request);
+                }
+                request = br.readLine();
+            }
+
             /**
              * else if (path.startsWith("/user/signup")) {
               // GET 방식 회원가입
@@ -56,7 +58,8 @@ public class RequestHandler implements Runnable {
                 log.log(Level.INFO, user.getName());
                 path = "/index.html";
             }*/
-            else if (path.equals("/user/signup")) {
+
+            if (path.equals("/user/signup")) {
                 //POST방식 회원가입
                 String body = IOUtils.readData(br, contentLength);
                 Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
@@ -64,27 +67,46 @@ public class RequestHandler implements Runnable {
                 repository.addUser(user);
                 log.log(Level.INFO, user.getName());
                 response302Heder(dos, "/index.html");
+
             } else if (path.equals("/user/login")) {
                 //POST방식 로그인
                 String body = IOUtils.readData(br, contentLength);
                 Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
-                String loginId = params.get("userId");
-                String loginPassword = params.get("password");
-                if (repository.findUserById(loginId).getPassword() != loginPassword) {
+                User loginUser = repository.findUserById(params.get("userId"));
+                System.out.println(loginUser);
 
+                if (loginUser == null) {
+                    responseResource(dos, "/user/login_failed.html");
                 }
-                //todo 헤더에 Cookie: logined=true 추가
-                log.log(Level.INFO, loginId);
-                response302Heder(dos, "/index.html");
+                if (loginUser.getPassword().equals(params.get("password"))) {
+                    response302LoginSuccessHeader(dos);
+                } else {
+                    responseResource(dos, "/user/login_failed.html");
+                }
+            } else {
+                responseResource(dos, path);
             }
-            byte[] body = Files.readAllBytes(new File("./webapp" + path).toPath());
-            response200Header(dos, body.length);
-            responseBody(dos, body);
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
 
+    private void response302LoginSuccessHeader(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Redirect \r\n");
+            dos.writeBytes("Set-Cookie: logined=true \r\n");
+            dos.writeBytes("Location: /index.html \r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private void responseResource(DataOutputStream dos, String path) throws IOException {
+        byte[] body = Files.readAllBytes(new File("./webapp" + path).toPath());
+        response200Header(dos, body.length);
+        responseBody(dos, body);
+    }
 
     private int getContentLength(String request) {
         String[] headerTokens = request.split(": ");
