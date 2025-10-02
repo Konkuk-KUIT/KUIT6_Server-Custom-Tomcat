@@ -75,12 +75,28 @@ public class RequestHandler implements Runnable{
 
             }
 
+            // 유저 리스트 출력
+            if(tokens[1].equals("/user/userList")) {
+                String line;
+                boolean isLogined = false;
+                while(!(line = br.readLine()).isEmpty()) {
+                    if(line.startsWith("Cookie:")) {
+                        String cookieValue = line.split(":")[1].trim();
+                        isLogined = Boolean.parseBoolean(cookieValue.split("=")[1]);
+                        break;
+                    }
+                }
+                if(!isLogined) {
+                    response302Header(dos, "/user/login.html");
+                }
+            }
+
             // 페이지 별 라우팅
             String filePath = switch (tokens[1]) {
                 case "/qna/form.html" -> "webapp/qna/form.html";
                 case "/qna/show.html" -> "webapp/qna/show.html";
                 case "/user/form.html" -> "webapp/user/form.html";
-                case "/user/list.html" -> "webapp/user/list.html";
+                case "/user/userList" -> "webapp/user/list.html";
                 case "/user/login.html" -> "webapp/user/login.html";
                 case "/user/login_failed.html" -> "webapp/user/login_failed.html";
                 default -> "webapp/index.html";
