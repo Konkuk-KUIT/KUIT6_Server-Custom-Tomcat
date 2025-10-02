@@ -2,6 +2,7 @@ package webserver;
 
 import db.MemoryUserRepository;
 import http.util.HttpRequestUtils;
+import http.util.IOUtils;
 import model.User;
 
 import java.io.*;
@@ -31,32 +32,58 @@ public class RequestHandler implements Runnable {
             if (requestLine == null || requestLine.isEmpty()) {
                 return; // 잘못된 요청이면 무시함
             }
+            // 헤더 읽기
+            int requestContentLength = 0;
+            while (true) {
+                final String line = br.readLine();
+                if (line == null || line.equals("")) {
+                    break;
+                }
+                // header info
+                if (line.startsWith("Content-Length")) {
+                    requestContentLength = Integer.parseInt(line.split(": ")[1]);
+                }
+            }
 
             // 공백으로 나눈 후 path 추출
             String[] parsedLine = requestLine.split(" ");
+            String method = parsedLine[0];
             String path = parsedLine[1];
             if (path.equals("/")) {
                 path = "/index.html";
             }
 
-            // [요구사항 2] 회원가입 요청일 경우
+            // 회원가입 처리
             if (path.startsWith("/user/signup")) {
-                String queryString = null;
-                int idx = path.indexOf("?");
-                if (idx != -1) {
-                    queryString = path.substring(idx + 1);
-                    path = path.substring(0, idx);
+                if (method.equals("GET")) { // [요구사항 2] 회원가입 요청일 경우
+                    String queryString = null;
+                    int idx = path.indexOf("?");
+                    if (idx != -1) {
+                        queryString = path.substring(idx + 1);
+                        path = path.substring(0, idx);
+                    }
+
+                    if (queryString != null) {
+                        Map<String, String> params = HttpRequestUtils.parseQueryParameter(queryString);
+
+                        User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+                        MemoryUserRepository.getInstance().addUser(user);
+                    }
+
+                    response302Header(dos, "/index.html");
+                    return;
+
+                } else if (method.equals("POST")) { // [요구사항 3] post방식의 회원가입일 경우
+                    String body = IOUtils.readData(br, requestContentLength);
+
+                    if (body != null && !body.isEmpty()) {
+                        Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
+                        User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+                        MemoryUserRepository.getInstance().addUser(user);
+                    }
+                    response302Header(dos, "/index.html");
+                    return;
                 }
-
-                if (queryString != null) {
-                    Map<String, String> params = HttpRequestUtils.parseQueryParameter(queryString);
-
-                    User user = new User(params.get("userId"),  params.get("password"), params.get("name"), params.get("email"));
-                    MemoryUserRepository.getInstance().addUser(user);
-                }
-
-                response302Header(dos, "/index.html");
-                return;
             }
 
 
