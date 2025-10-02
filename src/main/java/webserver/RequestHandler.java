@@ -1,6 +1,7 @@
 package webserver;
 
 import db.MemoryUserRepository;
+import enums.*;
 import model.User;
 
 import java.io.*;
@@ -11,6 +12,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static enums.HttpMethod.GET;
+import static enums.HttpMethod.POST;
+
 
 public class RequestHandler implements Runnable {
     Socket connection; // 소켓 - 데이터 주고받기 위한 양쪽 끝 단자
@@ -44,11 +49,11 @@ public class RequestHandler implements Runnable {
                     break;
                 }
                 // header info
-                if (line.startsWith("Content-Length")) {
+                if (HttpHeader.CONTENT_LENGTH.matches(line)) {
                     requestContentLength = Integer.parseInt(line.split(": ")[1].trim());
                 }
 
-                if (line.startsWith("Cookie")) {
+                if (HttpHeader.COOKIE.matches(line)) {
                     String cookieHeader = line.split(": ")[1]; // "logined=true"
                     if (cookieHeader.contains("logined=true")) {
                         isLogined = true;
@@ -56,12 +61,13 @@ public class RequestHandler implements Runnable {
                 }
             }
 
-            if (path.equals("/")) {
-                path = "/index.html";
+            if (RequestPath.ROOT.matches(path)) {
+                path = RequestPath.ROOT.getRedirect();
             }
+            HttpMethod httpMethod = HttpMethod.from(method);
 
             // 회원가입 요청 - GET일때
-            if (method.equalsIgnoreCase("GET") && path.startsWith("/user/signup")) {
+            if (httpMethod == GET && RequestPath.SIGNUP.matches(path)) {
                 String[] urlParts = path.split("\\?"); // path / query 분리 : ?을 기준으로 split 해준다!
                 String queryString = urlParts.length > 1 ? urlParts[1] : "";
 
@@ -69,46 +75,46 @@ public class RequestHandler implements Runnable {
                 saveUser(params);
 
                 // index.html로 리다이렉트
-                response302Header(dos, "/index.html");
+                response302Header(dos, RequestPath.INDEX.getPath());
                 return;
             }
 
             // 회원가입 요청 - POST일때
-            if (method.equalsIgnoreCase("POST") && path.equals("/user/signup")) {
+            if (httpMethod == POST && RequestPath.SIGNUP.matches(path)) {
                 String body = readBody(br, requestContentLength); // body를 읽어준다.
                 Map<String, String> params = parseFormData(body);
                 saveUser(params);
-                response302Header(dos, "/index.html");
+                response302Header(dos, RequestPath.INDEX.getPath());
                 return;
             }
 
             // 로그인 요청
-            if (method.equalsIgnoreCase("POST") && path.equals("/user/login")) {
+            if (httpMethod == POST && RequestPath.LOGIN.matches(path)) {
                 String body = readBody(br, requestContentLength); // body를 읽어준다.
                 Map<String, String> params = parseFormData(body);
 
-                String userId = params.get("userId");
-                String password = params.get("password");
+                String userId = params.get(UserParam.USER_ID.getKey());
+                String password = params.get(UserParam.PASSWORD.getKey());
 
                 MemoryUserRepository repository = MemoryUserRepository.getInstance();
                 User user = repository.findUserById(userId);
 
                 if (user != null && user.getPassword().equals(password)) { // 로그인 성공했으면
-                    response302LoginSuccess(dos, "/index.html");
+                    response302LoginSuccess(dos, RequestPath.INDEX.getPath());
                 } else
-                    response302Header(dos, "/user/logined_failed.html");
+                    response302Header(dos, RequestPath.USER_LOGIN_FAILED.getPath());
                 return;
             }
 
             // 사용자 목록 출력
-            if (path.equals("/user/userList")) {
-                if(isLogined){ // 로그인 되어있다면 userList.html 반환
-                    String filePath = "webapp/user/userList.html";
+            if (RequestPath.USER_LIST.matches(path)) {
+                if (isLogined) { // 로그인 되어있다면 userList.html 반환
+                    String filePath = "webapp" + RequestPath.USER_LIST.getPath();
                     byte[] body = Files.readAllBytes(Paths.get(filePath));
                     response200Header(dos, body.length, filePath);
                     responseBody(dos, body);
-                }else{
-                    response302Header(dos, "/user/login.html");
+                } else {
+                    response302Header(dos, RequestPath.LOGIN.getPath()+".html");
                 }
                 return;
             }
@@ -150,10 +156,10 @@ public class RequestHandler implements Runnable {
 
     private static void saveUser(Map<String, String> params) {
         User user = new User(
-                params.get("userId"),
-                params.get("password"),
-                params.get("name"),
-                params.get("email")
+                params.get(UserParam.USER_ID.getKey()),
+                params.get(UserParam.PASSWORD.getKey()),
+                params.get(UserParam.NAME.getKey()),
+                params.get(UserParam.EMAIL.getKey())
         );
 
         // 파싱한 데이터로 User 객체 만들어준다.
@@ -162,9 +168,9 @@ public class RequestHandler implements Runnable {
 
     private void response302LoginSuccess(DataOutputStream dos, String path) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
-            dos.writeBytes("Set-Cookie: logined=true\r\n"); // 로그인 여부 쿠키 저장
+            dos.writeBytes(HttpStatus.FOUND.toStatusLine());
+            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + path + "\r\n");
+            dos.writeBytes(HttpHeader.SET_COOKIE.getValue() + ": logined=true\r\n"); // 로그인 여부 쿠키 저장
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -173,8 +179,7 @@ public class RequestHandler implements Runnable {
 
     private void response302Header(DataOutputStream dos, String path) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes(HttpStatus.FOUND.toStatusLine());            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + path + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -183,13 +188,13 @@ public class RequestHandler implements Runnable {
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String path) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            if(path.endsWith(".css")){ // .css 요청이 오면 브라우저가 CSS로 인식해서 스타일 적용
-                dos.writeBytes("Content-Type: text/css\r\n");
-            }else {
-                dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes(HttpStatus.OK.toStatusLine());
+            if (path.endsWith(".css")) { // .css 요청이 오면 브라우저가 CSS로 인식해서 스타일 적용
+                dos.writeBytes(HttpHeader.CONTENT_TYPE.getValue() + ": text/css\r\n");
+            } else {
+                dos.writeBytes(HttpHeader.CONTENT_TYPE.getValue() + ": text/html;charset=utf-8\r\n");
             }
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH.getValue() + ": " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
