@@ -1,4 +1,4 @@
-package webserver;
+package main.java.webserver;
 
 import java.io.*;
 import java.net.Socket;
@@ -7,6 +7,13 @@ import java.util.logging.Logger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import main.java.db.MemoryUserRepository;
+import main.java.model.User;
+import java.util.HashMap;
+import java.util.Map;
+
 
 
 public class RequestHandler implements Runnable{
@@ -31,6 +38,26 @@ public class RequestHandler implements Runnable{
             String method  = tokens[0];
             String path  = tokens[1];
 
+            if (method.equals("GET") && path.startsWith("/user/signup")) {
+                String[] parts = path.split("\\?", 2);
+                String query = parts.length > 1 ? parts[1] : "";
+
+                Map<String, String> params = parseQueryString(query); // (아래 유틸 참고)
+
+                User u = new User(
+                        urlDecode(params.get("userId")),
+                        urlDecode(params.get("password")),
+                        urlDecode(params.get("name")),
+                        urlDecode(params.get("email"))
+                );
+
+                MemoryUserRepository.getInstance().addUser(u);
+                response302Header(dos, "/index.html");
+                dos.flush();
+                return;
+            }
+
+
             if(path.equals("/")){
                 path = "/index.html";
             }
@@ -44,7 +71,6 @@ public class RequestHandler implements Runnable{
             }
 
             byte[] body = Files.readAllBytes(filePath);
-
             response200Header(dos, body.length);
             responseBody(dos, body);
 
@@ -55,6 +81,23 @@ public class RequestHandler implements Runnable{
 
 
     }
+
+    private Map<String, String> parseQueryString(String qs) {
+        Map<String, String> map = new HashMap<>();
+        if (qs == null || qs.isEmpty()) return map;
+        for (String pair : qs.split("&")) {
+            String[] kv = pair.split("=", 2);
+            String k = kv[0];
+            String v = kv.length > 1 ? kv[1] : "";
+            map.put(k, v);
+        }
+        return map;
+    }
+
+    private String urlDecode(String s) {
+        return s == null ? null : URLDecoder.decode(s, StandardCharsets.UTF_8);
+    }
+
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
@@ -77,6 +120,19 @@ public class RequestHandler implements Runnable{
             log.log(Level.SEVERE, e.getMessage());
         }
     }
+
+    private void response302Header(DataOutputStream dos, String path) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found\r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("Content-Length: 0\r\n");
+            dos.writeBytes("\r\n");
+            dos.flush();
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
 
     private void responseBody(DataOutputStream dos, byte[] body) {
         try {
