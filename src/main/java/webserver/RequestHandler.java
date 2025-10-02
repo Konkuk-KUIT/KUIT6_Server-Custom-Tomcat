@@ -29,6 +29,7 @@ public class RequestHandler implements Runnable{
             String reqHeaderFirstLine = br.readLine();
             String[] tokens = reqHeaderFirstLine.split(" ");
 
+            // 회원가입 시도
             if(tokens[0].equals("POST") && tokens[1].equals("/user/signup")) {
                 String line;
                 int contentLength = 0;
@@ -46,9 +47,35 @@ public class RequestHandler implements Runnable{
                         queryToken[1].split("=")[1],
                         queryToken[2].split("=")[1],
                         queryToken[3].split("=")[1]));
-                response302Header(dos);
+                response302Header(dos, "/");
             }
 
+            // 로그인 시도
+            if(tokens[0].equals("POST") && tokens[1].equals("/user/login")){
+                String line;
+                int contentLength = 0;
+                while(!(line = br.readLine()).isEmpty()) {
+                    if(line.startsWith("Content-Length:")) {
+                        contentLength = Integer.parseInt(line.split(":")[1].trim());
+                    }
+                }
+                char[] bodyData = new char[contentLength];
+                br.read(bodyData, 0, contentLength);
+                String reqBody = new String(bodyData);
+                String[] queryToken = reqBody.split("&");
+                MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance();
+                String userId = queryToken[0].split("=")[1];
+                String passwd = queryToken[1].split("=")[1];
+                User user = memoryUserRepository.findUserById(userId);
+                if(user!= null && user.getPassword().equals(passwd)) {
+                    response302Header(dos, "/", true);
+                } else {
+                    response302Header(dos, "/user/login_failed.html");
+                }
+
+            }
+
+            // 페이지 별 라우팅
             String filePath = switch (tokens[1]) {
                 case "/qna/form.html" -> "webapp/qna/form.html";
                 case "/qna/show.html" -> "webapp/qna/show.html";
@@ -79,10 +106,22 @@ public class RequestHandler implements Runnable{
         }
     }
 
-    private void response302Header(DataOutputStream dos) {
+    private void response302Header(DataOutputStream dos, String route) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: / \r\n");
+            dos.writeBytes("Location: " + route + " \r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+    private void response302Header(DataOutputStream dos, String route, boolean hasCookie) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + route + " \r\n");
+            if(hasCookie) {
+                dos.writeBytes("Set-Cookie: logined=true \r\n");
+            }
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
