@@ -182,7 +182,6 @@ public class RequestHandler implements Runnable{
         try {
             dos.writeBytes("HTTP/1.1 302 Found\r\n");
             dos.writeBytes("Location: " + path + "\r\n");
-            dos.writeBytes("Content-Length: 0\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
