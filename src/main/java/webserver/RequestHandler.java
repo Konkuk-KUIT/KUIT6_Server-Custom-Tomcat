@@ -39,29 +39,12 @@ public class RequestHandler implements Runnable {
             }
 
             // 회원가입 요청인지 확인
-            if (path.startsWith("/user/signup")) {
+            if (method.equalsIgnoreCase("GET") && path.startsWith("/user/signup")) {
                 String[] urlParts = path.split("\\?"); // path / query 분리 : ?을 기준으로 split 해준다!
                 String queryString = urlParts.length > 1 ? urlParts[1] : "";
 
-                Map<String, String> params = new HashMap<>();
-                String[] pairs = queryString.split("&"); // &로 쪼개고
-                for (String pair : pairs) {
-                    String[] keyValues = pair.split("="); // 각 항목들을 = 기준으로 키/값 분리
-                    if (keyValues.length == 2) {
-                        params.put(keyValues[0], keyValues[1]);
-                    }
-                }
-
-                User user = new User(
-                        params.get("userId"),
-                        params.get("password"),
-                        params.get("name"),
-                        params.get("email")
-                );
-
-                // 파싱한 데이터로 User 객체 만들어준다.
-                MemoryUserRepository repository = MemoryUserRepository.getInstance();
-                repository.addUser(user);
+                Map<String, String> params = parseFormData(queryString);
+                saveUser(params);
 
                 // index.html로 리다이렉트
                 response302Header(dos, "/index.html");
@@ -82,6 +65,30 @@ public class RequestHandler implements Runnable {
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
+    }
+
+    private static Map<String, String> parseFormData(String queryString) {
+        Map<String, String> params = new HashMap<>();
+        String[] pairs = queryString.split("&"); // &로 쪼개고
+        for (String pair : pairs) {
+            String[] keyValues = pair.split("="); // 각 항목들을 = 기준으로 키/값 분리
+            if (keyValues.length == 2) {
+                params.put(keyValues[0], keyValues[1]);
+            }
+        }
+        return params;
+    }
+
+    private static void saveUser(Map<String, String> params) {
+        User user = new User(
+                params.get("userId"),
+                params.get("password"),
+                params.get("name"),
+                params.get("email")
+        );
+
+        // 파싱한 데이터로 User 객체 만들어준다.
+       MemoryUserRepository.getInstance().addUser(user);
     }
 
     private void response302Header(DataOutputStream dos, String path) {
