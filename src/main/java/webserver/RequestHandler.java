@@ -33,18 +33,27 @@ public class RequestHandler implements Runnable{
             String requestLine = br.readLine();
             String[] tokens = requestLine.split(" ");
             String method = tokens[0];
+            boolean isLogin = false;
 
-            if (method.equals("POST")) {
-                while (true) {
-                    String line = br.readLine();
-                    if (line.equals("")) break; // ← 빈 줄 만나면 헤더 끝!
+            String line;
+            while (true) {
+                line = br.readLine();
+                if (line == null || line.equals("")) break;
 
-                    if (line.startsWith("Content-Length")) {
-                        contentLength = Integer.parseInt(line.split(": ")[1]);
-                    }
+                if (line.startsWith("Content-Length")) {
+                    contentLength = Integer.parseInt(line.split(": ")[1]);
                 }
 
+                if (line.startsWith("Cookie")) {
+                    Map<String, String> cookies = HttpRequestUtils.parseQueryParameter(line);
+                    System.out.print("쿠키야");
+                    System.out.println(cookies);
+                    String loginCookie = cookies.get("logined");
 
+                    if ("true".equals(loginCookie)) {
+                        isLogin = true;
+                    }
+                }
             }
 
 
@@ -84,6 +93,11 @@ public class RequestHandler implements Runnable{
                 response200Header(dos, body);
                 responseBody(dos, body);
             }
+            else if(path.equals("/user/login_failed.html")){
+                byte[] body = Files.readAllBytes(Paths.get("./webapp/user/login_failed.html"));
+                response200Header(dos, body);
+                responseBody(dos, body);
+            }
 
             else if (path.equals("/user/login")) {
                 if (method.equals("POST")) {
@@ -95,13 +109,9 @@ public class RequestHandler implements Runnable{
                     String userId = params.get("userId");
                     String password = params.get("password");
 
-                    System.out.println(userId);     // gka365
-                    System.out.println(password);   // 1234
-
                     User existingUser = userDB.findUserById(userId);
-                    System.out.println(existingUser);
                     // 로그인 검증
-                    if (existingUser != null ) {
+                    if (existingUser != null) {
                         // 로그인 성공
                         response302HeaderWithCookie(dos, "/index.html"); // 홈으로 리다이렉트
                     } else {
@@ -109,6 +119,12 @@ public class RequestHandler implements Runnable{
                         response302Header(dos, "/user/login_failed.html");
                     }
                 }
+            }else if (path.equals("/user/userList")) {
+                // 자 여긴 만약에 했을때임
+
+                //여긴 못햇을때
+                response302Header(dos, "/user/login.html");
+
             }
 
         } catch (IOException e) {
