@@ -5,6 +5,7 @@ import model.User;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.http.HttpRequest;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.logging.Level;
@@ -27,17 +28,27 @@ public class RequestHandler implements Runnable{
 
             String reqHeaderFirstLine = br.readLine();
             String[] tokens = reqHeaderFirstLine.split(" ");
-            int queryStartIndex = tokens[1].indexOf("?");
-            if(tokens[0].equals("GET") && queryStartIndex != -1) {
-                String queryString = tokens[1].substring(queryStartIndex + 1);
-                String[] queryToken = queryString.split("&");
+
+            if(tokens[0].equals("POST") && tokens[1].equals("/user/signup")) {
+                String line;
+                int contentLength = 0;
+                while(!(line = br.readLine()).isEmpty()) {
+                    if(line.startsWith("Content-Length:")) {
+                        contentLength = Integer.parseInt(line.split(":")[1].trim());
+                    }
+                }
+                char[] bodyData = new char[contentLength];
+                br.read(bodyData, 0, contentLength);
+                String reqBody = new String(bodyData);
+                String[] queryToken = reqBody.split("&");
                 MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance();
                 memoryUserRepository.addUser(new User(queryToken[0].split("=")[1],
                         queryToken[1].split("=")[1],
                         queryToken[2].split("=")[1],
                         queryToken[3].split("=")[1]));
-                System.out.println(memoryUserRepository.findAll().toString());
+
             }
+
             String filePath = switch (tokens[1]) {
                 case "/qna/form.html" -> "webapp/qna/form.html";
                 case "/qna/show.html" -> "webapp/qna/show.html";
