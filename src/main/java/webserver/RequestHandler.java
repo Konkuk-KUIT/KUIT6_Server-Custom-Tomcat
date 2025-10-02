@@ -55,7 +55,25 @@ public class RequestHandler implements Runnable {
             if (path.equals("/")) {
                 path = "/index.html";
             }
+            File file = new File("./webapp" + path);
 
+
+            // [요구사항 7] css
+            // 아래 요구사항 1에서 이미 충족
+
+            // [요구사항 6] 사용자 목록 출력
+            if (path.startsWith("/user/userList")) {
+                if (cookie != null && cookie.contains("logined=true")) {
+                    try (FileInputStream fis = new FileInputStream(file)) {
+                        byte[] body = fis.readAllBytes();
+                        response200Header(dos, body.length, getContentType(path));
+                        responseBody(dos, body);
+                    }
+                } else {
+                    response302Header(dos, "/user/login.html");
+                }
+                return;
+            }
 
             // [요구사항 5] 로그인 처리
             if (path.startsWith("/user/login") && method.equals("POST")) {
@@ -112,7 +130,6 @@ public class RequestHandler implements Runnable {
 
             // [요구사항 1] 정적 파일 요청일 경우
 //            byte[] body = "Hello World".getBytes();
-            File file = new File("./webapp" + path);
             if (file.exists()) {
                 //byte[] body = Files.readAllBytes(file.toPath());
                 try (FileInputStream fis = new FileInputStream(file)) {
