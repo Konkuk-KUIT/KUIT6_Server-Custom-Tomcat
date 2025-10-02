@@ -2,6 +2,7 @@ package http;
 
 
 import enums.HttpMethod;
+import enums.RequestPath;
 
 import java.io.BufferedReader;
 import java.io.EOFException;
@@ -12,7 +13,7 @@ public class HttpRequest {
     private final HttpHeaderMap header;
     private final HttpBody body;
 
-    private HttpRequest(HttpStartLine startLine, HttpHeaderMap header, HttpBody body) {
+    protected HttpRequest(HttpStartLine startLine, HttpHeaderMap header, HttpBody body) {
         this.startLine = startLine;
         this.header = header;
         this.body = body;
