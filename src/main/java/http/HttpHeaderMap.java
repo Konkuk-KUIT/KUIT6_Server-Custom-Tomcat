@@ -38,7 +38,7 @@ public class HttpHeaderMap {
 
     public int getContentLength() {
         String length = getValue("Content-Length");
-        return Integer.parseInt(length);
+        return length == null ? 0 : Integer.parseInt(length);
     }
 
     public String getCookie() {
