@@ -105,7 +105,7 @@ public class RequestHandler implements Runnable {
                 if(isLogined){ // 로그인 되어있다면 userList.html 반환
                     String filePath = "webapp/user/userList.html";
                     byte[] body = Files.readAllBytes(Paths.get(filePath));
-                    response200Header(dos, body.length);
+                    response200Header(dos, body.length, filePath);
                     responseBody(dos, body);
                 }else{
                     response302Header(dos, "/user/login.html");
@@ -117,7 +117,7 @@ public class RequestHandler implements Runnable {
             byte[] body;
             try {
                 body = Files.readAllBytes(Paths.get(filePath));
-                response200Header(dos, body.length); // 응답 헤더: 200 OK
+                response200Header(dos, body.length, filePath); // 응답 헤더: 200 OK
                 responseBody(dos, body);             // 응답 바디: 파일 내용
             } catch (IOException e) {
                 // 파일이 없으면 404 응답을 해주자.
@@ -181,10 +181,14 @@ public class RequestHandler implements Runnable {
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String path) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            if(path.endsWith(".css")){ // .css 요청이 오면 브라우저가 CSS로 인식해서 스타일 적용
+                dos.writeBytes("Content-Type: text/css\r\n");
+            }else {
+                dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            }
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
