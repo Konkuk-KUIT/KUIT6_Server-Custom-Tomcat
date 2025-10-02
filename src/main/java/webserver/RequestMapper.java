@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RequestMapper {
-    private final Map<String, Controller> controllers = new HashMap<>();
+    final Map<String, Controller> controllers = new HashMap<>();
     private final HttpRequest request;
     private final HttpResponse response;
 

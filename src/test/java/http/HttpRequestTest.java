@@ -1,5 +1,6 @@
+package http;
+
 import enums.HttpMethod;
-import http.HttpRequest;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
