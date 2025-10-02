@@ -9,6 +9,7 @@ import model.User;
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,9 +42,13 @@ public class RequestHandler implements Runnable {
             }
 
             int contentLength = 0;
+            boolean logined = false;
             while(!request.equals("")){
                 if (request.contains("Content-Length")) {
                     contentLength = getContentLength(request);
+                }
+                if (request.contains("Cookie")) {
+                    logined = isLogined(request);
                 }
                 request = br.readLine();
             }
@@ -83,12 +88,47 @@ public class RequestHandler implements Runnable {
                 } else {
                     responseResource(dos, "/user/login_failed.html");
                 }
-            } else {
+            } else if (path.equals("/user/userList")) {
+                //로그인 상태일 때 userList조회
+                if (!logined) {
+                    response302Heder(dos, "/user/login.html");
+                }
+                responseResource(dos, "/user/list.html");
+            }
+            else if (request.endsWith(".css")) {
+                response200CssHeader(dos, path);
+            }
+            else {
                 responseResource(dos, path);
             }
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
+    }
+
+    private void response200CssHeader(DataOutputStream dos, String path) throws IOException {
+        byte[] body = Files.readAllBytes(new File("./webapp" + path).toPath());
+        try{
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css\r\n");
+            dos.writeBytes("Content-Length: " + body.length + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (Exception e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+
+        responseBody(dos, body);
+
+    }
+
+    private boolean isLogined(String request) {
+        String[] headerTokens = request.split(": ");
+        Map<String, String> cookies = HttpRequestUtils.parseCookies(headerTokens[1].trim());
+        String value = cookies.get("logined");
+        if (value == null) {
+            return false;
+        }
+        return Boolean.parseBoolean(value);
     }
 
     private void response302LoginSuccessHeader(DataOutputStream dos) {
