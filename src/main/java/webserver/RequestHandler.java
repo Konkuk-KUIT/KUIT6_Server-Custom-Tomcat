@@ -27,18 +27,32 @@ public class RequestHandler implements Runnable {
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             DataOutputStream dos = new DataOutputStream(out);
 
-            String request = br.readLine(); // 요청 라인 읽기 GET /index.html HTTP/1.1
+            // 요청 라인 읽기 GET /index.html HTTP/1.1
+            String request = br.readLine();
             if (request == null) return; // 요청 라인 비어있으면 종료..
 
             String[] tokens = request.split(" ");
             String method = tokens[0]; // 요청 방식
             String path = tokens[1]; // 요청한 경로
 
+            // 헤더 읽기 (body 길이 확인)
+            int requestContentLength = 0;
+            while (true) {
+                final String line = br.readLine();
+                if (line.isEmpty()) {
+                    break;
+                }
+                // header info
+                if (line.startsWith("Content-Length")) {
+                    requestContentLength = Integer.parseInt(line.split(": ")[1].trim());
+                }
+            }
+
             if (path.equals("/")) {
                 path = "/index.html";
             }
 
-            // 회원가입 요청인지 확인
+            // 회원가입 요청 - GET일때
             if (method.equalsIgnoreCase("GET") && path.startsWith("/user/signup")) {
                 String[] urlParts = path.split("\\?"); // path / query 분리 : ?을 기준으로 split 해준다!
                 String queryString = urlParts.length > 1 ? urlParts[1] : "";
@@ -47,6 +61,15 @@ public class RequestHandler implements Runnable {
                 saveUser(params);
 
                 // index.html로 리다이렉트
+                response302Header(dos, "/index.html");
+                return;
+            }
+
+            // 회원가입 요청 - POST일때
+            if(method.equalsIgnoreCase("POST") && path.equals("/user/signup")){
+                String body = readBody(br, requestContentLength); // body를 읽어준다.
+                Map<String, String> params = parseFormData(body);
+                saveUser(params);
                 response302Header(dos, "/index.html");
                 return;
             }
@@ -65,6 +88,14 @@ public class RequestHandler implements Runnable {
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
+    }
+
+    // br : 이미 헤더까지 읽고, 현재 바디 시작 위치에 커서가 있음.
+    private String readBody(BufferedReader br, int requestContentLength) throws IOException {
+        char [] buf = new char[requestContentLength]; // 요청 바디 길이만큼 맞는 char[] 배열 만들기
+            // buf : 읽은 데이터 담을 배열, 0 : buf 쓰기 시작할 위치
+        int read = br.read(buf, 0, requestContentLength); // 최대 contentLength만큼 바디 내용 읽어 buf에 저장
+        return new String(buf, 0, read); // 배열에 들어있는 내용 String으로 변환해서 반환!
     }
 
     private static Map<String, String> parseFormData(String queryString) {
