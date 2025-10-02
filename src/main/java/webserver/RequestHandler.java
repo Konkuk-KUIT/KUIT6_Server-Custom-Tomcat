@@ -74,6 +74,24 @@ public class RequestHandler implements Runnable {
                 return;
             }
 
+            // 로그인 요청
+            if(method.equalsIgnoreCase("POST") && path.equals("/user/login")){
+                String body = readBody(br, requestContentLength); // body를 읽어준다.
+                Map<String, String> params = parseFormData(body);
+
+                String userId = params.get("userId");
+                String password = params.get("password");
+
+                MemoryUserRepository repository = MemoryUserRepository.getInstance();
+                User user = repository.findUserById(userId);
+
+                if(user != null && user.getPassword().equals(password)){ // 로그인 성공했으면
+                    response302LoginSuccess(dos, "/index.html");
+                }else
+                    response302Header(dos, "/user/logined_failed.html");
+                return;
+            }
+
             String filePath = "webapp" + path; // URL 경로 → 프로젝트 폴더 경로로 매핑
 
             byte[] body;
@@ -120,6 +138,17 @@ public class RequestHandler implements Runnable {
 
         // 파싱한 데이터로 User 객체 만들어준다.
        MemoryUserRepository.getInstance().addUser(user);
+    }
+
+    private void response302LoginSuccess(DataOutputStream dos, String path) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + path +"\r\n");
+            dos.writeBytes("Set-Cookie: logined=true\r\n"); // 로그인 여부 쿠키 저장
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
     }
 
     private void response302Header(DataOutputStream dos, String path) {
