@@ -2,6 +2,7 @@ package webserver;
 
 import db.MemoryUserRepository;
 import http.util.HttpRequestUtils;
+import http.util.IOUtils;
 import model.User;
 
 import java.io.*;
@@ -40,8 +41,6 @@ public class RequestHandler implements Runnable {
             String method = tokens[0];  // GET, POST 등
             String url = tokens[1];     // /index.html, /user/form.html 등
 
-            log.log(Level.INFO, "Requested URL: " + url);
-
             // url에서 쿼리스트링 분리
             String path = url;
             String queryString = "";
@@ -56,31 +55,72 @@ public class RequestHandler implements Runnable {
                 path = "/index.html";
             }
 
-            log.log(Level.INFO, "Path: " + path);
-            log.log(Level.INFO, "QueryString: " + queryString);
+            log.log(Level.INFO, method + " " + path + (queryString.isEmpty() ? "" : "?" + queryString));
 
             // 회원가입 처리
             if (path.equals("/user/signup")) {
-                //쿼리스트링 파싱
-                Map<String, String> params = HttpRequestUtils.parseQueryParameter(queryString);
+                // POST 방식인 경우
+                if (method.equals("POST")) {
+                    // 헤더 읽기 (Content-Length 찾기)
+                    int contentLength = 0;
+                    while (true) {
+                        String line = br.readLine();
+                        if (line == null || line.equals("")) {
+                            break;  // 헤더 끝 (빈 줄)
+                        }
 
-                // User 객체 생성
-                User user = new User(
-                        params.get("userId"),
-                        params.get("password"),
-                        params.get("name"),
-                        params.get("email")
-                );
+                        // Content-Length 헤더 찾기
+                        if (line.startsWith("Content-Length")) {
+                            contentLength = Integer.parseInt(line.split(": ")[1]);
+                        }
+                    }
 
-                // MemoryUserRepository에 저장
-                MemoryUserRepository repository = MemoryUserRepository.getInstance();
-                repository.addUser(user);
+                    log.log(Level.INFO, "Content-Length: " + contentLength);
 
-                log.log(Level.INFO, "New User Added: " + user.getUserId());
+                    // Request Body 읽기
+                    String body = IOUtils.readData(br, contentLength);
+                    log.log(Level.INFO, "Request Body: " + body);
 
-                // 302 리다이렉트로 index.html로 이동
-                response302Header(dos, "/index.html");
-                return;
+                    // Body 파싱
+                    Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
+
+                    // User 객체 생성
+                    User user = new User(
+                            params.get("userId"),
+                            params.get("password"),
+                            params.get("name"),
+                            params.get("email")
+                    );
+
+                    // MemoryUserRepository에 저장
+                    MemoryUserRepository repository = MemoryUserRepository.getInstance();
+                    repository.addUser(user);
+
+                    log.log(Level.INFO, "New User Added (POST): " + user.getUserId());
+
+                    // 302 리다이렉트로 index.html로 이동
+                    response302Header(dos, "/index.html");
+                    return;
+                }
+                // GET 방식인 경우 (기존 코드 유지)
+                else if (method.equals("GET")) {
+                    Map<String, String> params = HttpRequestUtils.parseQueryParameter(queryString);
+
+                    User user = new User(
+                            params.get("userId"),
+                            params.get("password"),
+                            params.get("name"),
+                            params.get("email")
+                    );
+
+                    MemoryUserRepository repository = MemoryUserRepository.getInstance();
+                    repository.addUser(user);
+
+                    log.log(Level.INFO, "New User Added (GET): " + user.getUserId());
+
+                    response302Header(dos, "/index.html");
+                    return;
+                }
             }
 
             // favicon, devtools 관련 요청은 로그 출력 안 함
@@ -101,6 +141,7 @@ public class RequestHandler implements Runnable {
                 responseBody(dos, body);
             } else {
                 // 파일이 없으면 404 응답
+                log.log(Level.WARNING, "404 Not Found: " + path);
                 response404(dos);
             }
 
