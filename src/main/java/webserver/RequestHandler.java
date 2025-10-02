@@ -2,6 +2,7 @@ package webserver;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,9 +21,29 @@ public class RequestHandler implements Runnable{
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             DataOutputStream dos = new DataOutputStream(out);
 
-            byte[] body = "Hello World".getBytes();
-            response200Header(dos, body.length);
-            responseBody(dos, body);
+            String requestLine = br.readLine();
+            if (requestLine == null || requestLine.isEmpty()) {
+                return; // 잘못된 요청이면 무시함
+            }
+            String[] parsedLine = requestLine.split(" ");
+            String path = parsedLine[1];
+            if(path.equals("/")){
+                path = "/index.html";
+            }
+            File file = new File("./webapp" + path);
+
+            //byte[] body = "Hello World".getBytes();
+
+            if(file.exists()) {
+                byte[] body = Files.readAllBytes(file.toPath());
+                response200Header(dos, body.length);
+                responseBody(dos, body);
+            } else {
+                byte[] body = "<h1>404 Not Found</h1>".getBytes();
+                response404Header(dos, body.length);
+                responseBody(dos, body);
+            }
+
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
@@ -32,6 +53,17 @@ public class RequestHandler implements Runnable{
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private void response404Header(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 404 Not Found \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
