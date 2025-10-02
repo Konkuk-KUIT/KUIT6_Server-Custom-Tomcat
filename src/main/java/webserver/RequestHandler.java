@@ -1,7 +1,9 @@
 package webserver;
 
 import db.MemoryUserRepository;
+import http.enums.HttpHeader;
 import http.enums.HttpMethod;
+import http.enums.HttpStatus;
 import http.util.HttpRequestUtils;
 import http.util.IOUtils;
 import model.User;
@@ -163,7 +165,7 @@ public class RequestHandler implements Runnable {
     // [200 OK]
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("HTTP/1.1 " + HttpStatus.OK.getCode() + " " + HttpStatus.OK.getMessage() + " \r\n");
             dos.writeBytes("Content-Type: " + contentType + "\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
@@ -175,7 +177,7 @@ public class RequestHandler implements Runnable {
     // [404 Not Found]
     private void response404Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
-            dos.writeBytes("HTTP/1.1 404 Not Found \r\n");
+            dos.writeBytes("HTTP/1.1 " + HttpStatus.NOT_FOUND.getCode() + " " + HttpStatus.NOT_FOUND.getMessage() + " \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
@@ -187,7 +189,7 @@ public class RequestHandler implements Runnable {
     // [302 Found]
     private void response302Header(DataOutputStream dos, String redirectPath) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
             dos.writeBytes("Location: " + redirectPath + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -196,7 +198,7 @@ public class RequestHandler implements Runnable {
     }
     private void response302LoginSuccessHeader(DataOutputStream dos, String redirectPath) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
             dos.writeBytes("Location: " + redirectPath + "\r\n");
             dos.writeBytes("Set-Cookie: logined=true\r\n");
             dos.writeBytes("\r\n");
@@ -206,7 +208,7 @@ public class RequestHandler implements Runnable {
     }
     private void response302LoginFailHeader(DataOutputStream dos, String redirectPath) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
             dos.writeBytes("Location: " + redirectPath + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
