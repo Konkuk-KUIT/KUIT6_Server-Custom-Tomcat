@@ -121,9 +121,9 @@ public class RequestHandler implements Runnable{
             }
 
             byte[] body = Files.readAllBytes(filePath);
-            response200Header(dos, body.length);
+            String contentType = guessContentType(resourcePath);
+            response200Header(dos, body.length, contentType);
             responseBody(dos, body);
-
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
@@ -133,6 +133,16 @@ public class RequestHandler implements Runnable{
 
 
     }
+
+    private String guessContentType(String path) {
+        if (path.endsWith(".html")) return "text/html; charset=utf-8";
+        if (path.endsWith(".css"))  return "text/css; charset=utf-8";
+        if (path.endsWith(".js"))   return "application/javascript; charset=utf-8";
+        if (path.endsWith(".png"))  return "image/png";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+        return "application/octet-stream"; // 기본값
+    }
+
 
     private boolean isLogined(Map<String, String> headers) {
         String cookie = headers.get("Cookie");
@@ -212,10 +222,10 @@ public class RequestHandler implements Runnable{
     }
 
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Type: " + contentType + "\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
