@@ -5,5 +5,6 @@ public enum ControllerEnum {
     FORWARD,
     LIST,
     LOGIN,
-    SIGNUP;
+    SIGNUP,
+    CSS;
 }

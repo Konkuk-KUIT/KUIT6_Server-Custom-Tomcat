@@ -15,11 +15,16 @@ public class RequestMapper {
     }
 
     private void requestMapping() {
-        System.out.println(httpRequest.getRequestURI());
         if(httpRequest.getRequestURI().endsWith(".html")){
             controller = new ForwardController();
             return;
         }
+
+        if(httpRequest.getRequestURI().endsWith(".css")){
+            controller = new CssController();
+            return;
+        }
+
         controller = ControllerMap.getController(httpRequest.getRequestURI());
     }
 

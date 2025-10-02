@@ -5,7 +5,7 @@ public enum UrlPath {
     QNA_SHOW("/qna/show.html", "webapp/qna/show.html"),
     QNA_FORM("/qna/form.html", "webapp/qna/form.html"),
     USER_FORM("/user/form.html", "webapp/user/form.html"),
-    USER_LIST("/user/userList", "webapp/user/list.html"),
+    USER_LIST("/user/list.html", "webapp/user/list.html"),
     LOGIN_PAGE("/user/login.html", "webapp/user/login.html"),
     LOGIN_FAILED("/user/login_failed.html", "webapp/user/login_failed.html"),
     ROOT("webapp", null);
@@ -19,7 +19,6 @@ public enum UrlPath {
 
     public static UrlPath from(String requestURI) {
         if (requestURI == null) return null;
-        // 쿼리스트링 제거: "/user/userList?foo=bar" -> "/user/userList"
         int q = requestURI.indexOf('?');
         String onlyPath = (q >= 0) ? requestURI.substring(0, q) : requestURI;
 

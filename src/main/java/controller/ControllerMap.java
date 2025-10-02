@@ -12,6 +12,7 @@ public class ControllerMap {
         controllerMap.put("/", new HomeController());
         controllerMap.put("/user/userList", new ListController());
         controllerMap.put("/user/signup", new SignUpController());
+        controllerMap.put("css", new CssController());
     }
     public static Controller getController(String url){
         return controllerMap.get(url);

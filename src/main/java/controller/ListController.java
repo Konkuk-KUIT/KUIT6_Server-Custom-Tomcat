@@ -26,6 +26,6 @@ public class ListController implements Controller {
             httpResponse.response302Header(UrlPath.USER_LIST.getPath());
             return ;
         }
-        httpResponse.response302Header(UrlPath.LOGIN_PAGE.getFilePath());
+        httpResponse.response302Header(UrlPath.LOGIN_PAGE.getPath());
     }
 }
