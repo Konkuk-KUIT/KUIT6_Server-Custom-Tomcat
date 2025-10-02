@@ -1,6 +1,8 @@
 package http;
 
 
+import enums.HttpMethod;
+
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.IOException;
@@ -40,5 +42,13 @@ public class HttpRequest {
 
     public HttpBody getBody() {
         return body;
+    }
+
+    public HttpMethod getMethod(){
+        return startLine.getMethod();
+    }
+
+    public String getUrl() {
+        return startLine.getPath();
     }
 }

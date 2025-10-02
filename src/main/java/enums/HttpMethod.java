@@ -21,4 +21,8 @@ public enum HttpMethod {
             default -> throw new IllegalArgumentException("Unknown HTTP method");
         };
     }
+
+    public boolean isEqual(String get) {
+        return this.method.equalsIgnoreCase(get);
+    }
 }
