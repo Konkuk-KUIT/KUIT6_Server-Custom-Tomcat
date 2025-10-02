@@ -123,6 +123,50 @@ public class RequestHandler implements Runnable {
                 }
             }
 
+            // 로그인 처리
+            if (path.equals("/user/login") && method.equals("POST")) {
+                // 헤더 읽기 (Content-Length 찾기)
+                int contentLength = 0;
+                while (true) {
+                    String line = br.readLine();
+
+                    if (line == null || line.equals("")) {
+                        break;
+                    }
+
+                    if (line.startsWith("Content-Length")) {
+                        contentLength = Integer.parseInt(line.split(": ")[1]);
+                    }
+                }
+
+                log.log(Level.INFO, "Login attempt - Content-Length: " + contentLength);
+
+                // Request Body 읽기
+                String body = IOUtils.readData(br, contentLength);
+                log.log(Level.INFO, "Login Body: " + body);
+
+                // Body 파싱
+                Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
+                String userId = params.get("userId");
+                String password = params.get("password");
+
+                // Repository에서 사용자 찾기
+                MemoryUserRepository repository = MemoryUserRepository.getInstance();
+                User user = repository.findUserById(userId);
+
+                // 로그인 검증
+                if (user != null && user.getPassword().equals(password)) {
+                    // 로그인 성공
+                    log.log(Level.INFO, "✅ Login Success: " + userId);
+                    response302HeaderWithCookie(dos, "/index.html", "logined=true");
+                } else {
+                    // 로그인 실패
+                    log.log(Level.WARNING, "❌ Login Failed: " + userId);
+                    response302Header(dos, "/user/login_failed.html");
+                }
+                return;
+            }
+
             // favicon, devtools 관련 요청은 로그 출력 안 함
             if (path.equals("/favicon.ico") || path.contains("/.well-known/")) {
                 response404(dos);
@@ -188,6 +232,19 @@ public class RequestHandler implements Runnable {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("\r\n");
+            dos.flush();
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    // 쿠키와 함께 302 리다이렉트
+    private void response302HeaderWithCookie(DataOutputStream dos, String path, String cookie) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("Set-Cookie: " + cookie + "\r\n");  // 쿠키 설정
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
