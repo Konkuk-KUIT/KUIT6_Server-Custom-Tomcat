@@ -70,6 +70,12 @@ public class RequestHandler implements Runnable{
                 response200Header(dos, body);
                 responseBody(dos, body);
             }
+            else if (path.endsWith(".css")) {
+                // ✅ CSS 파일 처리
+                byte[] body = Files.readAllBytes(Paths.get("./webapp" + path));
+                responseCssHeader(dos, body);
+                responseBody(dos, body);
+            }
             else if (path.equals("/user/form.html")) {
                 // 회원가입 폼 반환
                 byte[] body = Files.readAllBytes(Paths.get("./webapp/user/form.html"));
@@ -180,6 +186,18 @@ public class RequestHandler implements Runnable{
             dos.writeBytes("HTTP/1.1 302 Found\r\n");
             dos.writeBytes("Location: " + path + "\r\n");
             dos.writeBytes("Set-Cookie: logined=true\r\n");  //
+            dos.writeBytes("\r\n");
+            dos.flush();
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private void responseCssHeader(DataOutputStream dos, byte[] body) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK\r\n");
+            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + body.length + "\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
