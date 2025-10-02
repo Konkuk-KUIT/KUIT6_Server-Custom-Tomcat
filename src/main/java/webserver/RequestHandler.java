@@ -35,9 +35,14 @@ public class RequestHandler implements Runnable{
             //byte[] body = "Hello World".getBytes();
 
             if(file.exists()) {
-                byte[] body = Files.readAllBytes(file.toPath());
-                response200Header(dos, body.length);
-                responseBody(dos, body);
+                //byte[] body = Files.readAllBytes(file.toPath());
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    byte[] body = fis.readAllBytes();
+                    response200Header(dos, body.length);
+                    responseBody(dos, body);
+                }  catch (IOException ex) {
+                    Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
+                }
             } else {
                 byte[] body = "<h1>404 Not Found</h1>".getBytes();
                 response404Header(dos, body.length);
