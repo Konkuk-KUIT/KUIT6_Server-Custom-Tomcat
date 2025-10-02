@@ -26,15 +26,30 @@ public class RequestHandler implements Runnable{
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             DataOutputStream dos = new DataOutputStream(out);
-
+            int contentLength = 0;
 
             String requestLine = br.readLine();
-            System.out.println(requestLine);
             String[] tokens = requestLine.split(" ");
-            String method = tokens[0]; // GET
+            String method = tokens[0];
+            String line;
+            while (true) {
+                line = br.readLine();
+                if (line.equals("")) break; // ← 빈 줄 만나면 헤더 끝!
+
+                if (line.startsWith("Content-Length")) {
+                    contentLength = Integer.parseInt(line.split(": ")[1]);
+                }
+            }
+
             String path = tokens[1];
             if (path.equals("/") || path.equals("/index.html")) {
                 // index.html 반환
+                if (method.equals("POST")) {
+                    char[] bodyData = new char[contentLength];
+                    br.read(bodyData, 0, contentLength);
+                    String body = new String(bodyData);
+                    System.out.println("요청 본문: " + body);
+                }
                 byte[] body = Files.readAllBytes(Paths.get("./webapp/index.html"));
                 response200Header(dos, body);
                 responseBody(dos, body);
