@@ -12,13 +12,13 @@ public enum HttpMethod {
         this.value = value;
     }
 
-    public String getValue() {
-        return value;
+    public static HttpMethod fromValue(String value) {
+        for (HttpMethod method : HttpMethod.values()) {
+            if (method.value.equalsIgnoreCase(value)) { // 대소문자 구분 없이
+                return method;
+            }
+        }
+        throw new IllegalArgumentException("Unknown method: " + value);
     }
-
-    public boolean isEqual(String methodString){
-        return true;
-    }
-
 
 }

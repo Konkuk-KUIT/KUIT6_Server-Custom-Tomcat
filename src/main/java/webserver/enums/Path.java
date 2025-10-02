@@ -1,6 +1,6 @@
 package webserver.enums;
 
-public enum URI {
+public enum Path {
     HOME("/"),
     LOGIN("/user/login"),
     SIGNUP("/user/signup"),
@@ -8,7 +8,7 @@ public enum URI {
 
     private final String value;
 
-    URI(String value) {
+    Path(String value) {
         this.value = value;
     }
 

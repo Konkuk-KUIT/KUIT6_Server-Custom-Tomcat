@@ -1,64 +1,90 @@
 package http.util;
 
+import webserver.HttpRequest;
+import webserver.enums.HttpMethod;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class HttpRequestUtils {
-//    public static Map<String, String> parseQueryParameter(String queryString) {
-//        try {
-//            String[] queryStrings = queryString.split("&");
-//
-//            return Arrays.stream(queryStrings)
-//                    .map(q -> q.split("="))
-//                    .collect(Collectors.toMap(queries -> queries[0], queries -> queries[1]));
-//        } catch (Exception e) {
-//            return new HashMap<>();
-//        }
-//    }
-    public static Map<String, String> parseRequestLine(String requestLine) {
-        Map<String, String> result = new HashMap<>();
-
-        String[] parts = requestLine.split(" ");
-        String method = parts[0];
-        String pathAndQuery = parts[1];
-
-        // 2. 경로와 쿼리 분리
+    public static HttpRequest parse(BufferedReader br) throws IOException {
+        HttpMethod method;
         String path;
-        String queryString = null;
-        if (pathAndQuery.contains("?")) {
-            String[] pathParts = pathAndQuery.split("\\?", 2);
-            path = pathParts[0];         // "/hello"
-            queryString = pathParts[1];  // "hello=123&min=123"
-        } else {
-            path = pathAndQuery;
+        Map<String, String> headers = new HashMap<>();
+        String body;
+
+        // 1. 첫 줄: Method, Path, Version
+        String line = br.readLine();
+        if (line == null || line.isEmpty()) {
+            throw new IOException("Empty Request");
         }
 
-        // 결과 Map에 담기
-        result.put("method", method);
-        result.put("path", path);
-        result.put("queryString", queryString);
+        String[] requestLine = line.split(" ");
+        method = HttpMethod.fromValue(requestLine[0]);
+        path = requestLine[1] ;
 
-        return result;
+        // 2. 헤더 읽기
+        while ((line = br.readLine()) != null && !line.isEmpty()) {
+            int idx = line.indexOf(":");
+            if (idx > 0) {
+                String key = line.substring(0, idx).trim();
+                String value = line.substring(idx + 1).trim();
+                headers.put(key, value);
+            }
+        }
+
+        // 3. Content-Length 확인 후 body 읽기
+        String contentLengthHeader = headers.get("Content-Length");
+        int contentLength = 0;
+        if (contentLengthHeader != null) {
+            try {
+                contentLength = Integer.parseInt(contentLengthHeader);
+            } catch (NumberFormatException ignored) {}
+        }
+
+        if (contentLength > 0) {
+            char[] bodyChars = new char[contentLength];
+            int read = br.read(bodyChars, 0, contentLength);
+            body = new String(bodyChars, 0, read);
+        } else {
+            body = "";
+        }
+        return HttpRequest.from(method,path,headers,body);
     }
 
-    public static Map<String, String> parseQueryParams(String queryString) {
-        Map<String, String> queryMap = new HashMap<>();
-
-        if (queryString == null || queryString.isEmpty()) {
-            return queryMap; // 빈 맵 반환
+    public static Map<String,String> parseCookies(String cookies) {
+        if (cookies == null || cookies.isEmpty()) {
+            return new HashMap<>();
         }
 
-        // & 기준으로 분리 → key=value 형태
-        String[] params = queryString.split("&");
-        for (String param : params) {
-            String[] keyValue = param.split("=", 2); // =를 기준으로 2개만 split
+        return Arrays.stream(cookies.split(";"))
+                .map(String::trim)
+                .map(cookie -> cookie.split("=", 2))
+                .filter(pair -> pair.length == 2)
+                .collect(Collectors.toMap(
+                        pair -> pair[0].trim(),
+                        pair -> pair[1].trim()
+                ));
+    }
+
+    public static Map<String, String> parseFormData(String formData) {
+        Map<String, String> map = new HashMap<>();
+
+        if (formData == null || formData.isEmpty()) {
+            return map;
+        }
+
+        String[] pairs = formData.split("&");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=", 2); // 2개만 split (value에 '=' 있을 수도 있음)
             String key = keyValue[0];
-            String value = keyValue.length > 1 ? keyValue[1] : ""; // 값이 없으면 빈 문자열
-            queryMap.put(key, value);
+            String value = keyValue[1];
+            map.put(key, value);
         }
 
-        return queryMap;
+        return map;
     }
 }
