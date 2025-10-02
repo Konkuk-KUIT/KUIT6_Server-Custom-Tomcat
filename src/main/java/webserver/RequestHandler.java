@@ -7,6 +7,7 @@ import http.enums.HttpStatus;
 import http.util.HttpRequestUtils;
 import http.util.IOUtils;
 import model.User;
+import model.UserQueryKey;
 
 import java.io.*;
 import java.net.Socket;
@@ -85,8 +86,8 @@ public class RequestHandler implements Runnable {
 
                 if (body != null && !body.isEmpty()) {
                     Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
-                    String userId = params.get("userId");
-                    String password = params.get("password");
+                    String userId = params.get(UserQueryKey.USER_ID.getKey());
+                    String password = params.get(UserQueryKey.PASSWORD.getKey());
 
                     User user = MemoryUserRepository.getInstance().findUserById(userId);
                     if (user != null && password.equals(user.getPassword())) {
@@ -110,7 +111,12 @@ public class RequestHandler implements Runnable {
                     if (queryString != null) {
                         Map<String, String> params = HttpRequestUtils.parseQueryParameter(queryString);
 
-                        User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+                        User user = new User(
+                                params.get(UserQueryKey.USER_ID.getKey()),
+                                params.get(UserQueryKey.PASSWORD.getKey()),
+                                params.get(UserQueryKey.NAME.getKey()),
+                                params.get(UserQueryKey.EMAIL.getKey())
+                        );
                         MemoryUserRepository.getInstance().addUser(user);
                     }
 
@@ -196,6 +202,7 @@ public class RequestHandler implements Runnable {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
+
     private void response302LoginSuccessHeader(DataOutputStream dos, String redirectPath) {
         try {
             dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
@@ -206,6 +213,7 @@ public class RequestHandler implements Runnable {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
+
     private void response302LoginFailHeader(DataOutputStream dos, String redirectPath) {
         try {
             dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
