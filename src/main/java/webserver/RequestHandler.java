@@ -10,6 +10,10 @@ import java.nio.file.Files;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import main.java.db.MemoryUserRepository;
+import main.java.http.enums.HttpHeader;
+import main.java.http.enums.HttpMethod;
+import main.java.http.enums.HttpStatus;
+import main.java.http.enums.QueryKey;
 import main.java.model.User;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,16 +43,18 @@ public class RequestHandler implements Runnable{
             String method  = tokens[0];
             String rawPath  = tokens[1];
 
+            HttpMethod httpMethod = HttpMethod.from(tokens[0]);
+
             int q = rawPath.indexOf('?'); if (q >= 0) rawPath = rawPath.substring(0, q);
             rawPath = rawPath.replaceAll("/+", "/");
             if (rawPath.length() > 1 && rawPath.endsWith("/")) rawPath = rawPath.substring(0, rawPath.length()-1);
             final String path = rawPath;
 
             Map<String, String> headers = readHeaders(br);
-            int contentLength = Integer.parseInt(headers.getOrDefault("Content-Length", "0"));
+            int contentLength = Integer.parseInt(headers.getOrDefault(HttpHeader.CONTENT_LENGTH.getKey(), "0"));
 
 
-//            if (method.equals("GET") && path.startsWith("/user/signup")) {
+//            if (httpMethod == HttpMethod.GET && path.startsWith("/user/signup")) {
 //                String[] parts = path.split("\\?", 2);
 //                String query = parts.length > 1 ? parts[1] : "";
 //
@@ -69,7 +75,7 @@ public class RequestHandler implements Runnable{
 
 
 
-            if ("POST".equalsIgnoreCase(method) && "/user/signup".equals(path)) {
+            if (httpMethod == HttpMethod.POST && "/user/signup".equals(path)) {
                 char[] buf = new char[contentLength];
                 int off = 0;
                 while (off < contentLength) {
@@ -82,10 +88,10 @@ public class RequestHandler implements Runnable{
                 Map<String, String> params = parseQueryString(body);
 
                 User u = new User(
-                        urlDecode(params.get("userId")),
-                        urlDecode(params.get("password")),
-                        urlDecode(params.get("name")),
-                        urlDecode(params.get("email"))
+                        urlDecode(params.get(QueryKey.USER_ID.getKey())),
+                        urlDecode(params.get(QueryKey.PASSWORD.getKey())),
+                        urlDecode(params.get(QueryKey.NAME.getKey())),
+                        urlDecode(params.get(QueryKey.EMAIL.getKey()))
                 );
                 MemoryUserRepository.getInstance().addUser(u);
 
@@ -96,12 +102,12 @@ public class RequestHandler implements Runnable{
             }
 
 
-            if ("POST".equalsIgnoreCase(method) && "/user/login".equals(rawPath)) {
+            if (httpMethod == HttpMethod.POST && "/user/login".equals(rawPath)) {
                 handleLogin(br,dos,contentLength);
                 return;
             }
 
-            if ("GET".equalsIgnoreCase(method) && "/user/list.html".equals(path)) {
+            if (httpMethod == HttpMethod.GET && "/user/list.html".equals(path)) {
                 if (!isLogined(headers)) {
                     response302Header(dos, "/user/login.html"); // 로그인 안 되어 있으면 리다이렉트
                     return;
@@ -201,8 +207,8 @@ public class RequestHandler implements Runnable{
             String body = readBody(br, contentLength);
             Map<String, String> form = parseQueryString(body);
 
-            String userId = form.get("userId");
-            String password = form.get("password");
+            String userId = form.get(QueryKey.USER_ID.getKey());
+            String password = form.get(QueryKey.PASSWORD.getKey());
 
             User found = MemoryUserRepository.getInstance().findUserById(userId);
 
@@ -224,9 +230,9 @@ public class RequestHandler implements Runnable{
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: " + contentType + "\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes(HttpStatus.OK.format());
+            dos.writeBytes(HttpHeader.CONTENT_TYPE.getKey() + contentType + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH.getKey() + lengthOfBodyContent + "\r\n");
             dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -236,9 +242,9 @@ public class RequestHandler implements Runnable{
 
     private void response404Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
-            dos.writeBytes("HTTP/1.1 404 Not Found\r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes(HttpStatus.NOT_FOUND.format());
+            dos.writeBytes(HttpHeader.CONTENT_TYPE.getKey()+"text/html;charset=utf-8\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH.getKey()+ lengthOfBodyContent + "\r\n");
             dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -248,8 +254,8 @@ public class RequestHandler implements Runnable{
 
     private void response302Header(DataOutputStream dos, String path) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes(HttpStatus.FOUND.format());
+            dos.writeBytes(HttpHeader.LOCATION.getKey() + path + "\r\n");
             dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
@@ -260,9 +266,9 @@ public class RequestHandler implements Runnable{
 
     private void response302WithCookie(DataOutputStream dos, String location, String cookie) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + location + "\r\n");
-            dos.writeBytes("Set-Cookie: " + cookie + "\r\n");
+            dos.writeBytes(HttpStatus.FOUND.format());
+            dos.writeBytes(HttpHeader.LOCATION.getKey() + location + "\r\n");
+            dos.writeBytes(HttpHeader.SET_COOKIE + cookie + "\r\n");
             dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
