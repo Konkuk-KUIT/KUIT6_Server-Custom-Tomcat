@@ -128,7 +128,7 @@ public class RequestHandler implements Runnable {
             }
 
 
-            // [요구사항 1] 정적 파일 요청일 경우
+            // [요구사항 1 + 7] 정적 파일 요청일 경우
 //            byte[] body = "Hello World".getBytes();
             if (file.exists()) {
                 //byte[] body = Files.readAllBytes(file.toPath());
