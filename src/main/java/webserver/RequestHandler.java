@@ -2,6 +2,7 @@ package webserver;
 
 import db.MemoryUserRepository;
 import http.util.HttpRequestUtils;
+import http.util.IOUtils;
 import model.User;
 
 import java.io.*;
@@ -57,11 +58,27 @@ public class RequestHandler implements Runnable {
             }
 
             if (path.contains("/user/signup")) {
-                String[] pathTokens = path.split("\\?");
-                Map<String, String> userInfos = HttpRequestUtils.parseQueryParameter(pathTokens[1]);
+//                String[] pathTokens = path.split("\\?");
+//                Map<String, String> userInfos = HttpRequestUtils.parseQueryParameter(pathTokens[1]);
+//                MemoryUserRepository db = MemoryUserRepository.getInstance();
+//                db.addUser(new User(userInfos.get("userId"), userInfos.get("password"), userInfos.get("name"), userInfos.get("email")));
+//                response302Header(dos, "/index.html");
+
                 MemoryUserRepository db = MemoryUserRepository.getInstance();
-                db.addUser(new User(userInfos.get("userId"), userInfos.get("password"), userInfos.get("name"), userInfos.get("email")));
-                response302Header(dos, "/index.html");
+                while (true) {
+                    final String line = br.readLine();
+                    if (line.equals("")) {
+                        break;
+                    }
+                    if (line.startsWith("Content-Length")) {
+                        int requestContentLength = Integer.parseInt(line.split(": ")[1]);
+                        Map<String, String> userInfos = HttpRequestUtils
+                                .parseQueryParameter(IOUtils.readData(br, requestContentLength));
+                        db.addUser(new User(userInfos.get("userId")
+                                , userInfos.get("password"), userInfos.get("name"), userInfos.get("email")));
+                        response302Header(dos, "/index.html");
+                    }
+                }
             }
 
         } catch (IOException e) {
