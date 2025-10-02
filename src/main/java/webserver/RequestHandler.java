@@ -99,11 +99,16 @@ public class RequestHandler implements Runnable{
                 case "/user/userList" -> "webapp/user/list.html";
                 case "/user/login.html" -> "webapp/user/login.html";
                 case "/user/login_failed.html" -> "webapp/user/login_failed.html";
+                case "/css/styles.css" -> "webapp/css/styles.css";
                 default -> "webapp/index.html";
             };
 
             byte[] body = Files.readAllBytes(Paths.get(filePath));
-            response200Header(dos, body.length);
+            if(tokens[1].endsWith(".css")) {
+                response200Header(dos, body.length, true);
+            } else {
+                response200Header(dos, body.length);
+            }
             responseBody(dos, body);
 
         } catch (IOException e) {
@@ -112,9 +117,17 @@ public class RequestHandler implements Runnable{
     }
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+        response200Header(dos, lengthOfBodyContent, false);
+    }
+
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, boolean isCss) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            if(isCss) {
+                dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
+            } else {
+                dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            }
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -123,13 +136,7 @@ public class RequestHandler implements Runnable{
     }
 
     private void response302Header(DataOutputStream dos, String route) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + route + " \r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
+        response302Header(dos, route, false);
     }
     private void response302Header(DataOutputStream dos, String route, boolean hasCookie) {
         try {
