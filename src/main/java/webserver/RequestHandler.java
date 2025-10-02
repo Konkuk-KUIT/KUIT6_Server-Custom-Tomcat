@@ -1,5 +1,8 @@
 package webserver;
 
+import db.MemoryUserRepository;
+import model.User;
+
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -24,34 +27,27 @@ public class RequestHandler implements Runnable{
 
             String reqHeaderFirstLine = br.readLine();
             String[] tokens = reqHeaderFirstLine.split(" ");
-            String filePath;
-
-            System.out.println(reqHeaderFirstLine);
-
-            switch (tokens[1]) {
-                case "/qna/form.html":
-                    filePath = "webapp/qna/form.html";
-                    break;
-                case "/qna/show.html":
-                    filePath = "webapp/qna/show.html";
-                    break;
-                case "/user/form.html":
-                    filePath = "webapp/user/form.html";
-                    break;
-                case "/user/list.html":
-                    filePath = "webapp/user/list.html";
-                    break;
-                case "/user/login.html":
-                    filePath = "webapp/user/login.html";
-                    break;
-                case "/user/login_failed.html":
-                    filePath = "webapp/user/login_failed.html";
-                    break;
-                default:
-                    filePath = "webapp/index.html";
-                    break;
+            int queryStartIndex = tokens[1].indexOf("?");
+            if(tokens[0].equals("GET") && queryStartIndex != -1) {
+                String queryString = tokens[1].substring(queryStartIndex + 1);
+                String[] queryToken = queryString.split("&");
+                MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance();
+                memoryUserRepository.addUser(new User(queryToken[0].split("=")[1],
+                        queryToken[1].split("=")[1],
+                        queryToken[2].split("=")[1],
+                        queryToken[3].split("=")[1]));
+                System.out.println(memoryUserRepository.findAll().toString());
             }
-            System.out.println(filePath);
+            String filePath = switch (tokens[1]) {
+                case "/qna/form.html" -> "webapp/qna/form.html";
+                case "/qna/show.html" -> "webapp/qna/show.html";
+                case "/user/form.html" -> "webapp/user/form.html";
+                case "/user/list.html" -> "webapp/user/list.html";
+                case "/user/login.html" -> "webapp/user/login.html";
+                case "/user/login_failed.html" -> "webapp/user/login_failed.html";
+                default -> "webapp/index.html";
+            };
+
             byte[] body = Files.readAllBytes(Paths.get(filePath));
             response200Header(dos, body.length);
             responseBody(dos, body);
