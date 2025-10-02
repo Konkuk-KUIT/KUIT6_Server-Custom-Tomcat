@@ -126,7 +126,7 @@ public class RequestHandler implements Runnable {
                 response200Header(dos, body.length, filePath); // 응답 헤더: 200 OK
                 responseBody(dos, body);             // 응답 바디: 파일 내용
             } catch (IOException e) {
-                // 파일이 없으면 404 응답을 해주자.
+                response404Header(dos);
             }
 
         } catch (IOException e) {
@@ -164,6 +164,17 @@ public class RequestHandler implements Runnable {
 
         // 파싱한 데이터로 User 객체 만들어준다.
         MemoryUserRepository.getInstance().addUser(user);
+    }
+
+    private void response404Header(DataOutputStream dos) {
+        try {
+            dos.writeBytes(HttpStatus.NOT_FOUND.toStatusLine());
+            dos.writeBytes(HttpHeader.CONTENT_TYPE.getValue() + ": text/html;charset=utf-8\r\n");
+            dos.writeBytes("\r\n");
+            dos.writeBytes("<h1>404 Not Found</h1>");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
     }
 
     private void response302LoginSuccess(DataOutputStream dos, String path) {
