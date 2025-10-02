@@ -27,7 +27,8 @@ public class RequestHandler implements Runnable{
     @Override
     public void run() {
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
-        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
+        try (InputStream in = connection.getInputStream();
+             OutputStream out = connection.getOutputStream()){
             BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
             DataOutputStream dos = new DataOutputStream(out);
 
@@ -43,20 +44,9 @@ public class RequestHandler implements Runnable{
             if (rawPath.length() > 1 && rawPath.endsWith("/")) rawPath = rawPath.substring(0, rawPath.length()-1);
             final String path = rawPath;
 
-            int contentLength = 0;
-            String contentType = null;
-            String line;
-            while ((line = br.readLine()) != null && !line.isEmpty()) {
-                int idx = line.indexOf(':');
-                if (idx < 0) continue;
-                String name  = line.substring(0, idx).trim().toLowerCase(); // ← 소문자 통일
-                String value = line.substring(idx + 1).trim();               // ← 공백 제거(중요)
-                if (name.equals("content-length")) {
-                    contentLength = Integer.parseInt(value);                 // " 78"도 OK
-                } else if (name.equals("content-type")) {
-                    contentType = value; // 예: "application/x-www-form-urlencoded; charset=UTF-8"
-                }
-            }
+            Map<String, String> headers = readHeaders(br);
+            int contentLength = Integer.parseInt(headers.getOrDefault("Content-Length", "0"));
+
 
 //            if (method.equals("GET") && path.startsWith("/user/signup")) {
 //                String[] parts = path.split("\\?", 2);
@@ -76,6 +66,8 @@ public class RequestHandler implements Runnable{
 //                dos.flush();
 //                return;
 //            }
+
+
 
             if ("POST".equalsIgnoreCase(method) && "/user/signup".equals(path)) {
                 char[] buf = new char[contentLength];
@@ -104,6 +96,12 @@ public class RequestHandler implements Runnable{
             }
 
 
+            if ("POST".equalsIgnoreCase(method) && "/user/login".equals(rawPath)) {
+                handleLogin(br,dos,contentLength);
+                return;
+            }
+
+
             // 정적 파일 처리
             String resourcePath = path;
             if ("/".equals(resourcePath)) resourcePath = "/index.html";
@@ -123,10 +121,39 @@ public class RequestHandler implements Runnable{
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
+        } finally {
+            try { connection.close(); } catch (Exception ignore) {}
         }
 
 
     }
+
+    private Map<String, String> readHeaders(BufferedReader br) throws IOException {
+        Map<String, String> headers = new HashMap<>();
+        String line;
+        while ((line = br.readLine()) != null && !line.isEmpty()) {
+            int idx = line.indexOf(':');
+            if (idx > 0) {
+                String key = line.substring(0, idx).trim();
+                String val = line.substring(idx + 1).trim();
+                headers.put(key, val);
+            }
+        }
+        return headers;
+    }
+
+    private String readBody(BufferedReader br, int contentLength) throws IOException {
+        char[] buf = new char[contentLength];
+        int off = 0;
+        while (off < contentLength) {
+            int r = br.read(buf, off, contentLength - off);
+            if (r == -1) break;
+            off += r;
+        }
+        return new String(buf, 0, off);
+    }
+
+
 
     private Map<String, String> parseQueryString(String qs) {
         Map<String, String> map = new HashMap<>();
@@ -140,27 +167,38 @@ public class RequestHandler implements Runnable{
         return map;
     }
 
+    private void handleLogin(BufferedReader br, DataOutputStream dos, int contentLength) {
+        try {
+            String body = readBody(br, contentLength);
+            Map<String, String> form = parseQueryString(body);
+
+            String userId = form.get("userId");
+            String password = form.get("password");
+
+            User found = MemoryUserRepository.getInstance().findUserById(userId);
+
+            if (found != null && found.getPassword().equals(password)) {
+                response302WithCookie(dos, "/index.html", "logined=true; Path=/");
+            } else {
+                response302Header(dos, "/user/login_failed.html");
+            }
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "login error: " + e.getMessage(), e);
+            response302Header(dos, "/user/login_failed.html");
+        }
+    }
+
     private String urlDecode(String s) {
         return s == null ? null : URLDecoder.decode(s, StandardCharsets.UTF_8);
     }
 
-
-    private byte[] readExactBytes(InputStream in, int len) throws IOException {
-        byte[] buf = new byte[len];
-        int off = 0;
-        while (off < len) {
-            int r = in.read(buf, off, len - off);
-            if (r == -1) throw new EOFException("Unexpected end of stream while reading body");
-            off += r;
-        }
-        return buf;
-    }
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -172,6 +210,7 @@ public class RequestHandler implements Runnable{
             dos.writeBytes("HTTP/1.1 404 Not Found\r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -182,11 +221,23 @@ public class RequestHandler implements Runnable{
         try {
             dos.writeBytes("HTTP/1.1 302 Found\r\n");
             dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("Connection: close\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
+    }
+
+    private void response302WithCookie(DataOutputStream dos, String location, String cookie) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found\r\n");
+            dos.writeBytes("Location: " + location + "\r\n");
+            dos.writeBytes("Set-Cookie: " + cookie + "\r\n");
+            dos.writeBytes("Connection: close\r\n");
+            dos.writeBytes("\r\n");
+            dos.flush();
+        } catch (IOException e) { log.log(Level.SEVERE, e.getMessage()); }
     }
 
 
