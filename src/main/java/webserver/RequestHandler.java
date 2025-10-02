@@ -56,7 +56,7 @@ public class RequestHandler implements Runnable {
                 responseBody(dos, Files.readAllBytes(Paths.get(file.getPath())));
             }
 
-            if (path.contains("/users/signup")) {
+            if (path.contains("/user/signup")) {
                 String[] pathTokens = path.split("\\?");
                 Map<String, String> userInfos = HttpRequestUtils.parseQueryParameter(pathTokens[1]);
                 MemoryUserRepository db = MemoryUserRepository.getInstance();
@@ -70,7 +70,13 @@ public class RequestHandler implements Runnable {
     }
 
     private void response302Header(DataOutputStream dos, String path) {
-
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + path);
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
     }
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
