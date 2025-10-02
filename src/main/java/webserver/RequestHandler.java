@@ -1,6 +1,7 @@
 package webserver;
 
 import db.MemoryUserRepository;
+import http.enums.HttpMethod;
 import http.util.HttpRequestUtils;
 import http.util.IOUtils;
 import model.User;
@@ -50,7 +51,8 @@ public class RequestHandler implements Runnable {
 
             // 공백으로 나눈 후 path 추출
             String[] parsedLine = requestLine.split(" ");
-            String method = parsedLine[0];
+            //String method = parsedLine[0];
+            HttpMethod method = HttpMethod.valueOf(parsedLine[0]);
             String path = parsedLine[1];
             if (path.equals("/")) {
                 path = "/index.html";
@@ -76,8 +78,7 @@ public class RequestHandler implements Runnable {
             }
 
             // [요구사항 5] 로그인 처리
-            if (path.startsWith("/user/login") && method.equals("POST")) {
-//                if (method.equals("POST")) {}
+            if (path.startsWith("/user/login") && method == HttpMethod.POST) {
                 String body = IOUtils.readData(br, requestContentLength);
 
                 if (body != null && !body.isEmpty()) {
