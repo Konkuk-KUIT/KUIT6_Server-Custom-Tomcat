@@ -38,10 +38,8 @@ public class RequestHandler implements Runnable{
                 //byte[] body = Files.readAllBytes(file.toPath());
                 try (FileInputStream fis = new FileInputStream(file)) {
                     byte[] body = fis.readAllBytes();
-                    response200Header(dos, body.length);
+                    response200Header(dos, body.length, getContentType(path));
                     responseBody(dos, body);
-                }  catch (IOException ex) {
-                    Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
                 }
             } else {
                 byte[] body = "<h1>404 Not Found</h1>".getBytes();
@@ -55,10 +53,20 @@ public class RequestHandler implements Runnable{
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private String getContentType(String path) {
+        if (path.endsWith(".html")) return "text/html;charset=utf-8";
+        if (path.endsWith(".css")) return "text/css;charset=utf-8";
+        if (path.endsWith(".js")) return "application/javascript";
+        if (path.endsWith(".png")) return "image/png";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+        if (path.endsWith(".gif")) return "image/gif";
+        return "application/octet-stream"; // 알 수 없는 경우 바이너리로 처리
+    }
+
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Type: " + contentType + "\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
