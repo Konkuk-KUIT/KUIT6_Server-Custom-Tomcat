@@ -149,6 +149,25 @@ public class RequestHandler implements Runnable {
                     responseBody(dos, Files.readAllBytes(Paths.get(file.getPath())));
                 }
             }
+
+            if (path.endsWith(".css")) {
+                File file = new File("webapp" + path);
+                int fileLength = (int) file.length();
+                responseCssHeader(dos, fileLength);
+                responseBody(dos, Files.readAllBytes(Paths.get(file.getPath())));
+            }
+
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private void responseCssHeader(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
