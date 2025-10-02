@@ -37,6 +37,7 @@ public class RequestHandler implements Runnable {
 
             // 헤더 읽기 (body 길이 확인)
             int requestContentLength = 0;
+            boolean isLogined = false;
             while (true) {
                 final String line = br.readLine();
                 if (line.isEmpty()) {
@@ -45,6 +46,13 @@ public class RequestHandler implements Runnable {
                 // header info
                 if (line.startsWith("Content-Length")) {
                     requestContentLength = Integer.parseInt(line.split(": ")[1].trim());
+                }
+
+                if (line.startsWith("Cookie")) {
+                    String cookieHeader = line.split(": ")[1]; // "logined=true"
+                    if (cookieHeader.contains("logined=true")) {
+                        isLogined = true;
+                    }
                 }
             }
 
@@ -66,7 +74,7 @@ public class RequestHandler implements Runnable {
             }
 
             // 회원가입 요청 - POST일때
-            if(method.equalsIgnoreCase("POST") && path.equals("/user/signup")){
+            if (method.equalsIgnoreCase("POST") && path.equals("/user/signup")) {
                 String body = readBody(br, requestContentLength); // body를 읽어준다.
                 Map<String, String> params = parseFormData(body);
                 saveUser(params);
@@ -75,7 +83,7 @@ public class RequestHandler implements Runnable {
             }
 
             // 로그인 요청
-            if(method.equalsIgnoreCase("POST") && path.equals("/user/login")){
+            if (method.equalsIgnoreCase("POST") && path.equals("/user/login")) {
                 String body = readBody(br, requestContentLength); // body를 읽어준다.
                 Map<String, String> params = parseFormData(body);
 
@@ -85,15 +93,27 @@ public class RequestHandler implements Runnable {
                 MemoryUserRepository repository = MemoryUserRepository.getInstance();
                 User user = repository.findUserById(userId);
 
-                if(user != null && user.getPassword().equals(password)){ // 로그인 성공했으면
+                if (user != null && user.getPassword().equals(password)) { // 로그인 성공했으면
                     response302LoginSuccess(dos, "/index.html");
-                }else
+                } else
                     response302Header(dos, "/user/logined_failed.html");
                 return;
             }
 
-            String filePath = "webapp" + path; // URL 경로 → 프로젝트 폴더 경로로 매핑
+            // 사용자 목록 출력
+            if (path.equals("/user/userList")) {
+                if(isLogined){ // 로그인 되어있다면 userList.html 반환
+                    String filePath = "webapp/user/userList.html";
+                    byte[] body = Files.readAllBytes(Paths.get(filePath));
+                    response200Header(dos, body.length);
+                    responseBody(dos, body);
+                }else{
+                    response302Header(dos, "/user/login.html");
+                }
+                return;
+            }
 
+            String filePath = "webapp" + path; // URL 경로 → 프로젝트 폴더 경로로 매핑
             byte[] body;
             try {
                 body = Files.readAllBytes(Paths.get(filePath));
@@ -110,8 +130,8 @@ public class RequestHandler implements Runnable {
 
     // br : 이미 헤더까지 읽고, 현재 바디 시작 위치에 커서가 있음.
     private String readBody(BufferedReader br, int requestContentLength) throws IOException {
-        char [] buf = new char[requestContentLength]; // 요청 바디 길이만큼 맞는 char[] 배열 만들기
-            // buf : 읽은 데이터 담을 배열, 0 : buf 쓰기 시작할 위치
+        char[] buf = new char[requestContentLength]; // 요청 바디 길이만큼 맞는 char[] 배열 만들기
+        // buf : 읽은 데이터 담을 배열, 0 : buf 쓰기 시작할 위치
         int read = br.read(buf, 0, requestContentLength); // 최대 contentLength만큼 바디 내용 읽어 buf에 저장
         return new String(buf, 0, read); // 배열에 들어있는 내용 String으로 변환해서 반환!
     }
@@ -137,13 +157,13 @@ public class RequestHandler implements Runnable {
         );
 
         // 파싱한 데이터로 User 객체 만들어준다.
-       MemoryUserRepository.getInstance().addUser(user);
+        MemoryUserRepository.getInstance().addUser(user);
     }
 
     private void response302LoginSuccess(DataOutputStream dos, String path) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + path +"\r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
             dos.writeBytes("Set-Cookie: logined=true\r\n"); // 로그인 여부 쿠키 저장
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -154,7 +174,7 @@ public class RequestHandler implements Runnable {
     private void response302Header(DataOutputStream dos, String path) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + path +"\r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
