@@ -59,4 +59,8 @@ public class HttpHeaderMap {
         return hasCookie("logined", "true");
     }
 
+    public String get(String key) {
+        return headers.get(key);
+    }
+
 }
