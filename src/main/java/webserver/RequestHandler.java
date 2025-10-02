@@ -101,6 +101,12 @@ public class RequestHandler implements Runnable{
                 return;
             }
 
+            if ("GET".equalsIgnoreCase(method) && "/user/list.html".equals(path)) {
+                if (!isLogined(headers)) {
+                    response302Header(dos, "/user/login.html"); // 로그인 안 되어 있으면 리다이렉트
+                    return;
+                }}
+
 
             // 정적 파일 처리
             String resourcePath = path;
@@ -126,6 +132,19 @@ public class RequestHandler implements Runnable{
         }
 
 
+    }
+
+    private boolean isLogined(Map<String, String> headers) {
+        String cookie = headers.get("Cookie");
+        if (cookie == null) return false;
+        for (String part : cookie.split(";")) {
+            int eq = part.indexOf('=');
+            if (eq < 0) continue;
+            String k = part.substring(0, eq).trim();
+            String v = part.substring(eq + 1).trim();
+            if ("logined".equals(k) && "true".equals(v)) return true;
+        }
+        return false;
     }
 
     private Map<String, String> readHeaders(BufferedReader br) throws IOException {
