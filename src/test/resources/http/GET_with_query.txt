@@ -1,0 +1,2 @@
+GET /user/signup?userId=test&password=1234 HTTP/1.1
+Host: localhost:8080
