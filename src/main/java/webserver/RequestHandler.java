@@ -167,6 +167,49 @@ public class RequestHandler implements Runnable {
                 return;
             }
 
+            // 사용자 목록 요청 처리
+            if (path.equals("/user/userList")) {
+                // 헤더에서 Cookie 찾기
+                String cookieHeader = null;
+
+                // 헤더 읽기 (빈 줄까지)
+                while (true) {
+                    String line = br.readLine();
+                    if (line == null || line.equals("")) {
+                        break;
+                    }
+                    if (line.startsWith("Cookie")) {
+                        cookieHeader = line.split(": ", 2)[1];
+                    }
+                }
+
+                log.log(Level.INFO, "Cookie Header: " + cookieHeader);
+
+                // Cookie에서 logined 값 확인
+                String loginedValue = getCookieValue(cookieHeader, "logined");
+
+                if ("true".equals(loginedValue)) {
+                    // 로그인 상태: list.html 보여주기
+                    log.log(Level.INFO, "Authorized - Showing user list");
+
+                    String filePath = "./webapp/user/list.html";
+                    File file = new File(filePath);
+
+                    if (file.exists()) {
+                        byte[] body = Files.readAllBytes(file.toPath());
+                        response200Header(dos, body.length);
+                        responseBody(dos, body);
+                    } else {
+                        response404(dos);
+                    }
+                } else {
+                    // 비로그인 상태: login.html로 리다이렉트
+                    log.log(Level.WARNING, "Unauthorized - Redirecting to login");
+                    response302Header(dos, "/user/login.html");
+                }
+                return;
+            }
+
             // favicon, devtools 관련 요청은 로그 출력 안 함
             if (path.equals("/favicon.ico") || path.contains("/.well-known/")) {
                 response404(dos);
@@ -250,6 +293,18 @@ public class RequestHandler implements Runnable {
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
+    }
+
+    // Cookie 헤더에서 특정 쿠키 값 가져오기
+    private String getCookieValue(String cookieHeader, String cookieName) {
+        if (cookieHeader == null) {
+            return null;
+        }
+        // "Cookie: logined=true" → "true" 반환
+        if (cookieHeader.contains("logined=true")) {
+            return "true";
+        }
+        return null;
     }
 
 }
