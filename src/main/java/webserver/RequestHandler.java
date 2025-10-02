@@ -44,9 +44,9 @@ public class RequestHandler implements Runnable {
                     break;
                 }
                 // header info
-                if (line.startsWith("Content-Length")) {
+                if (line.startsWith(HttpHeader.CONTENT_LENGTH.getValue())) {
                     requestContentLength = Integer.parseInt(line.split(": ")[1]);
-                } else if (line.startsWith("Cookie")) {
+                } else if (line.startsWith(HttpHeader.COOKIE.getValue())) {
                     cookie = line.split(": ")[1];
                 }
             }
@@ -99,7 +99,7 @@ public class RequestHandler implements Runnable {
 
             // 회원가입 처리
             if (path.startsWith("/user/signup")) {
-                if (method.equals("GET")) { // [요구사항 2] 회원가입 요청일 경우
+                if (method == HttpMethod.GET) { // [요구사항 2] 회원가입 요청일 경우
                     String queryString = null;
                     int idx = path.indexOf("?");
                     if (idx != -1) {
@@ -117,7 +117,7 @@ public class RequestHandler implements Runnable {
                     response302Header(dos, "/index.html");
                     return;
 
-                } else if (method.equals("POST")) { // [요구사항 3] post방식의 회원가입일 경우
+                } else if (method == HttpMethod.POST) { // [요구사항 3] post방식의 회원가입일 경우
                     String body = IOUtils.readData(br, requestContentLength);
 
                     if (body != null && !body.isEmpty()) {
@@ -166,8 +166,8 @@ public class RequestHandler implements Runnable {
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
             dos.writeBytes("HTTP/1.1 " + HttpStatus.OK.getCode() + " " + HttpStatus.OK.getMessage() + " \r\n");
-            dos.writeBytes("Content-Type: " + contentType + "\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_TYPE.getValue() + ": " + contentType + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH.getValue() + ": " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -178,8 +178,8 @@ public class RequestHandler implements Runnable {
     private void response404Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 " + HttpStatus.NOT_FOUND.getCode() + " " + HttpStatus.NOT_FOUND.getMessage() + " \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_TYPE.getValue() + ": text/html;charset=utf-8\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH.getValue() + ": " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -190,7 +190,7 @@ public class RequestHandler implements Runnable {
     private void response302Header(DataOutputStream dos, String redirectPath) {
         try {
             dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
-            dos.writeBytes("Location: " + redirectPath + "\r\n");
+            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + redirectPath + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -199,8 +199,8 @@ public class RequestHandler implements Runnable {
     private void response302LoginSuccessHeader(DataOutputStream dos, String redirectPath) {
         try {
             dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
-            dos.writeBytes("Location: " + redirectPath + "\r\n");
-            dos.writeBytes("Set-Cookie: logined=true\r\n");
+            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + redirectPath + "\r\n");
+            dos.writeBytes(HttpHeader.SET_COOKIE.getValue() + ": logined=true\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -209,7 +209,7 @@ public class RequestHandler implements Runnable {
     private void response302LoginFailHeader(DataOutputStream dos, String redirectPath) {
         try {
             dos.writeBytes("HTTP/1.1 " + HttpStatus.FOUND.getCode() + " " + HttpStatus.FOUND.getMessage() + " \r\n");
-            dos.writeBytes("Location: " + redirectPath + "\r\n");
+            dos.writeBytes(HttpHeader.LOCATION.getValue() + ": " + redirectPath + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
