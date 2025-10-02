@@ -20,10 +20,10 @@ public class WebServer {
             port = Integer.parseInt(args[0]);
         }
 
-        // TCP 환영 소켓
+        // TCP 환영 소켓: 새로운 연결을 받아들이는 역할, 서버에 오직 하나, 직접 데이터를 주고 받진 않음.
         try (ServerSocket welcomeSocket = new ServerSocket(port)){
 
-            // 연결 소켓
+            // 연결 소켓: 클라이언트 요청 하나당 소켓 하나를 연결, 접속한 클라이언트 수만큼 생성됨.
             Socket connection;
             while ((connection = welcomeSocket.accept()) != null) {
                 // 스레드에 작업 전달
