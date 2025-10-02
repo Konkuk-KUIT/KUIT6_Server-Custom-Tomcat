@@ -1,14 +1,12 @@
 package webserver;
 
 import db.MemoryUserRepository;
-import http.util.HttpRequestUtils;
-import http.util.IOUtils;
+import http.HttpRequest;
 import model.User;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,55 +22,33 @@ public class RequestHandler implements Runnable{
     public void run() {
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
-            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
             DataOutputStream dos = new DataOutputStream(out);
+            HttpRequest request = new HttpRequest(in);
 
-            String line = br.readLine();
-            if (line == null) {
-                return;
-            }
+            String url = request.getPath();
 
-            String[] tokens = line.split(" ");
-            String method = tokens[0];
-            String url = tokens[1];
-
-            if (method.equals("POST") && url.equals("/user/signup")) {
-                int contentLength = 0;
-                String headerLine = line;
-                while ((headerLine = br.readLine()) != null && !headerLine.isEmpty()) {
-                    if (headerLine.startsWith("Content-Length")) {
-                        contentLength = Integer.parseInt(headerLine.split(":")[1].trim());
-                    }
-                }
-
-                String body = IOUtils.readData(br, contentLength);
-                Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
-                User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+            if (request.getMethod().equals("POST") && url.equals("/user/signup")) {
+                User user = new User(
+                        request.getParameter("userId"),
+                        request.getParameter("password"),
+                        request.getParameter("name"),
+                        request.getParameter("email"));
                 MemoryUserRepository.getInstance().addUser(user);
                 response302Header(dos, "/index.html");
                 return;
             }
 
-            if (method.equals("POST") && url.equals("/user/login")) {
-                int contentLength = 0;
-                String headerLine = line;
-                while ((headerLine = br.readLine()) != null && !headerLine.isEmpty()) {
-                    if (headerLine.startsWith("Content-Length")) {
-                        contentLength = Integer.parseInt(headerLine.split(":")[1].trim());
-                    }
-                }
+            if (request.getMethod().equals("POST") && url.equals("/user/login")) {
+                User user = MemoryUserRepository.getInstance().findUserById(request.getParameter("userId"));
 
-                String body = IOUtils.readData(br, contentLength);
-                Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
-                User user = MemoryUserRepository.getInstance().findUserById(params.get("userId"));
-
-                if (user != null && user.getPassword().equals(params.get("password"))) {
+                if (user != null && user.getPassword().equals(request.getParameter("password"))) {
                     response302HeaderWithCookie(dos, "/index.html");
                 } else {
                     response302Header(dos, "/user/login_failed.html");
                 }
                 return;
             }
+
 
             String path = url.split("\\?")[0];
             if (path.equals("/")) {
