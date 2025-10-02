@@ -197,7 +197,7 @@ public class RequestHandler implements Runnable {
 
                     if (file.exists()) {
                         byte[] body = Files.readAllBytes(file.toPath());
-                        response200Header(dos, body.length);
+                        response200Header(dos, body.length, "text/html;charset=utf-8");
                         responseBody(dos, body);
                     } else {
                         response404(dos);
@@ -224,7 +224,11 @@ public class RequestHandler implements Runnable {
             if (file.exists() && !file.isDirectory()) {
                 // 파일이 존재하면 파일 내용 읽기
                 byte[] body = Files.readAllBytes(file.toPath());
-                response200Header(dos, body.length);
+
+                // Content-Type을 파일 확장자에 따라 결정
+                String contentType = getContentType(path);
+
+                response200Header(dos, body.length, contentType);  // contentType 전달
                 responseBody(dos, body);
             } else {
                 // 파일이 없으면 404 응답
@@ -237,10 +241,30 @@ public class RequestHandler implements Runnable {
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    // 파일 확장자에 따라 Content-Type 결정
+    private String getContentType(String path) {
+        if (path.endsWith(".css")) {
+            return "text/css";
+        } else if (path.endsWith(".js")) {
+            return "application/javascript";
+        } else if (path.endsWith(".html")) {
+            return "text/html;charset=utf-8";
+        } else if (path.endsWith(".png")) {
+            return "image/png";
+        } else if (path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+            return "image/jpeg";
+        } else if (path.endsWith(".gif")) {
+            return "image/gif";
+        } else {
+            return "text/html;charset=utf-8";
+        }
+    }
+
+    // Content-Type을 파라미터로 받도록 수정
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Type: " + contentType + "\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
