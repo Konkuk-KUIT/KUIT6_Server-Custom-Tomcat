@@ -1,5 +1,8 @@
 package webserver;
 
+import db.MemoryUserRepository;
+import model.User;
+
 import java.io.*;
 import java.lang.reflect.Field;
 import java.net.Socket;
@@ -57,17 +60,33 @@ public class RequestHandler implements Runnable {
                 path = Paths.get("./webapp/user/login_failed.html");
             }
 
-            if (path != null)
-                body = Files.readAllBytes(path);
+
 
             //get 요청 중 querystring 형식 오는 것을 확인
+            //token="/user/signup?userId=fsfs&password=fsf&name=fsfs&email=sally_0113%40naver.com"
             String[] queryString = token.split("\\?");
-            if(queryString[0].equals("signup")){
-                //token="/user/signup?userId=fsfs&password=fsf&name=fsfs&email=sally_0113%40naver.com"
+            if (queryString[0].equals("/user/signup")) {
                 //들어온 정보를 parsing 하여 User instance 생성
+                //queryString[1] = "userId=fsfs&password=fsf&name=fsfs&email=sally_0113%40naver.com"
+                String[] userInfo = queryString[1].split("[&=]");
+                //userInfo[] => userId, fsfs, password, fsf, name, fsfs, email, sally~
+                //public User(String userId, String password, String name, String email) {
+                String userId = userInfo[1];
+                String password = userInfo[3];
+                String name = userInfo[5];
+                String email = userInfo[7];
+                User user = new User(userId, password, name, email);
 
+                //만든 user instance 를 MemoryUserRepository 에 저장 후 index.html 반환
+                //회원가입 시 user 저장
+                MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance();
+                memoryUserRepository.addUser(user);
+                //302 로 리다이렉트
+                response302Header(dos, "/index.html");
             }
 
+            if (path != null)
+                body = Files.readAllBytes(path);
             response200Header(dos, body.length);
             responseBody(dos, body);
 
@@ -88,7 +107,13 @@ public class RequestHandler implements Runnable {
     }
 
     private void response302Header(DataOutputStream dos, String path) {
-
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: "+path+"\r\n");
+            dos.writeBytes("\r\n");
+        }catch(Exception e){
+            log.log(Level.SEVERE, e.getMessage());
+        }
     }
 
     private void responseBody(DataOutputStream dos, byte[] body) {
