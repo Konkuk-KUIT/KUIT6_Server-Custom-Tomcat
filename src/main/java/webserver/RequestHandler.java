@@ -36,8 +36,8 @@ public class RequestHandler implements Runnable {
             String method = tokens[0];
             String path = tokens[1];
 
-            if (path.equals("/") || path.equals("/index.html")) {
-                File file = new File("webapp/index.html");
+            if (path.equals(URL.DEFAULT.getUrl()) || path.equals(URL.INDEX.getUrl())) {
+                File file = new File(Path.INDEX_FILE.getPath());
                 int fileLength = (int) file.length();
                 response200Header(dos, fileLength);
                 responseBody(dos, Files.readAllBytes(Paths.get(file.getPath())));
