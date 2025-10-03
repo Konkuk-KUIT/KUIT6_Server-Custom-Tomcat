@@ -1,11 +1,17 @@
 package webserver;
 
+import controller.Controller;
+import controller.RequestMapping;
+import http.util.HttpRequest;
+import http.util.HttpResponse;
+import http.util.httpMethod;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class RequestHandler implements Runnable{
+public class RequestHandler implements Runnable {
     Socket connection;
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
 
@@ -16,37 +22,25 @@ public class RequestHandler implements Runnable{
     @Override
     public void run() {
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
-        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            DataOutputStream dos = new DataOutputStream(out);
+        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
+            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
 
-            byte[] body = "Hello World".getBytes();
-            response200Header(dos, body.length);
-            responseBody(dos, body);
+            HttpRequest request = HttpRequest.from(br);
+            HttpResponse response = new HttpResponse(out);
 
-        } catch (IOException e) {
-            log.log(Level.SEVERE,e.getMessage());
-        }
-    }
+            // POST 요청은 특별히 매핑된 컨트롤러를 찾습니다.
+            if (request.getMethod() == httpMethod.POST) {
+                Controller controller = RequestMapping.getController(request.getPath());
+                controller.execute(request, response);
+                return;
+            }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
+            // 그 외 GET 요청 등은 URL에 맞는 컨트롤러를 찾아서 위임합니다.
+            Controller controller = RequestMapping.getController(request.getPath());
+            controller.execute(request, response);
+
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
-
-    private void responseBody(DataOutputStream dos, byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
 }
