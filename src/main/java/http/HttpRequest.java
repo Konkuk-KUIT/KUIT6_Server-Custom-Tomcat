@@ -25,4 +25,12 @@ public class HttpRequest {
 
         return new HttpRequest(HttpStartLine.from(requestLine), httpHeader, body);
     }
+
+    public String getMethod(){
+        return startLine.getMethod();
+    }
+
+    public String getUrl(){
+        return startLine.getTarget();
+    }
 }

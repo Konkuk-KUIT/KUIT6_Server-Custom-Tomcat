@@ -17,4 +17,12 @@ public class HttpStartLine {
         String[] tokens = startLine.split(" ");
         return new HttpStartLine(HttpMethod.valueOf(tokens[0]), URL.valueOf(tokens[1]), tokens[2]);
     }
+
+    public String getMethod() {
+        return method.getMethod();
+    }
+
+    public String getTarget(){
+        return target.getUrl();
+    }
 }
