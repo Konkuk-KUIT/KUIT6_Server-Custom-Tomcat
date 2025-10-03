@@ -21,13 +21,13 @@ public class WebServer {
         }
 
         // TCP 환영 소켓
-        try (ServerSocket welcomeSocket = new ServerSocket(port)){
+        try (ServerSocket welcomeSocket = new ServerSocket(port)){ //port번호에 해당하는 포트에서 들어오는 연결을 받음
 
             // 연결 소켓
             Socket connection;
-            while ((connection = welcomeSocket.accept()) != null) {
+            while ((connection = welcomeSocket.accept()) != null) { //클라이언트가 접속을 시도하면, 연결 소켓에 연결함
                 // 스레드에 작업 전달
-                service.submit(new RequestHandler(connection));
+                service.submit(new RequestHandler(connection)); //이후 스레드 풀에 넘겨서 비동기로 실행
             }
         }
 
