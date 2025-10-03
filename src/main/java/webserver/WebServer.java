@@ -20,10 +20,10 @@ public class WebServer {
             port = Integer.parseInt(args[0]);
         }
 
-        // TCP 환영 소켓
+        // TCP 환영 소켓 - 모든 요청을 받음
         try (ServerSocket welcomeSocket = new ServerSocket(port)){
 
-            // 연결 소켓
+            // 연결 소켓 - 클라이언트 요청 하나당 소켓 하나씩 연결.. -> 접속한 클라이언트 수 만큼 생성
             Socket connection;
             while ((connection = welcomeSocket.accept()) != null) {
                 // 스레드에 작업 전달
