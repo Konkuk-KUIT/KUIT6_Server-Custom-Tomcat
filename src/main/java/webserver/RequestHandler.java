@@ -1,6 +1,7 @@
 package webserver;
 
 import db.MemoryUserRepository;
+import http.HttpRequest;
 import http.constants.HttpHeader;
 import http.constants.HttpStatusCode;
 import http.util.IOUtils;
@@ -32,14 +33,18 @@ public class RequestHandler implements Runnable{
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             DataOutputStream dos = new DataOutputStream(out);
 
-            String request = br.readLine();
-            if(request == null) {
-                return;
-            }
-            log.info("Request: " + request);
-            String[] tokens = request.split(" ");
-            String url = tokens[1];
-            String mimeTypes = MimeTypes.fromFilename(url);
+            HttpRequest httpRequest = HttpRequest.from(br);
+            String url = httpRequest.getUrl();
+            String mimeTypes = httpRequest.getMimeType();
+
+//            String request = br.readLine();
+//            if(request == null) {
+//                return;
+//            }
+//            log.info("Request: " + request);
+//            String[] tokens = request.split(" ");
+//            String url = tokens[1];
+//            String mimeTypes = MimeTypes.fromFilename(url);
 
             if (url.equals("/")) {
                 url = "/index.html";
