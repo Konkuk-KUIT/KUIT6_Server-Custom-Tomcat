@@ -41,6 +41,7 @@ public class RequestHandler implements Runnable {
 
             System.out.println(uri);
             Path path = null;
+            String cookie = null;
 
             //GET 요청 읽어오기
             if (uri.equals("/") || uri.equals("/index.html")) {
@@ -53,9 +54,9 @@ public class RequestHandler implements Runnable {
             if (uri.equals("/user/form.html")) {
                 path = Paths.get("./webapp/user/form.html");
             }
-            if (uri.equals("/user/list.html")) {
-                path = Paths.get("./webapp/user/list.html");
-            }
+//            if (uri.equals("/user/list.html")) { //브라우저에 이렇게 입력하면 직접 GET 요청을 준 것.
+//                path = Paths.get("./webapp/user/list.html");
+//            }
             if (uri.equals("/user/login.html")) {
                 path = Paths.get("./webapp/user/login.html");
             }
@@ -63,8 +64,7 @@ public class RequestHandler implements Runnable {
                 path = Paths.get("./webapp/user/login_failed.html");
             }
 
-
-            //post 요청 읽어오기
+            //header 읽어오기
             int requestContentLength = 0;
             while (true) {
                 final String line = br.readLine();
@@ -74,6 +74,9 @@ public class RequestHandler implements Runnable {
                 // header info
                 if (line.startsWith("Content-Length")) {
                     requestContentLength = Integer.parseInt(line.split(": ")[1]);
+                }
+                if (line.startsWith("Cookie")) {
+                    cookie = line.split(": ")[1];   //"logined=true"
                 }
             }
 //            IOUtils ioUtils = new IOUtils(br, requestContentLength);
@@ -100,6 +103,7 @@ public class RequestHandler implements Runnable {
                 memoryUserRepository.addUser(user);
                 //302 로 리다이렉트
                 response302Header(dos, "/index.html", null);
+                return;
             }
 
             //uri="/user/login?userId=fsfs&password=fsf (get인 경우)
@@ -115,12 +119,24 @@ public class RequestHandler implements Runnable {
                     //header에 Cookie 추가
 //                    dos.writeBytes("Set-Cookie: logined=true\r\n");
                     response302Header(dos, "/index.html", "logined=true");
+                    return;
                 } else {
                     //존재하지 않으면 login_failed 로 돌아감
                     path = Paths.get("./webapp/user/login_failed.html");
 
                 }
             }
+
+            if (uri.equals("/user/userList")) {
+                //header의 Cookie가 logined=true 일 때만
+                if(cookie!=null&&cookie.contains("logined=true")){
+                    path = Paths.get("./webapp/user/list.html");
+                }else {
+                    response302Header(dos, "/user/login.html", null); //로그인 되지 않은 화면으로 리다렉트
+                    return;
+                }
+            }
+
 
 
             if (path != null)
@@ -150,7 +166,7 @@ public class RequestHandler implements Runnable {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             if(cookie!=null) {
-                dos.writeBytes("Set-Cookie: "+cookie+"\r\n");
+                dos.writeBytes("Set-Cookie: "+cookie+"; Path=/\r\n");
             }
             dos.writeBytes("Location: " + path + "\r\n");
             dos.writeBytes("\r\n");
