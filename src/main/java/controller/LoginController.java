@@ -1,7 +1,6 @@
 package controller;
 
 import db.MemoryUserRepository;
-import db.Repository;
 import model.User;
 import webserver.HttpRequest;
 import webserver.HttpResponse;

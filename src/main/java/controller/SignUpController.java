@@ -1,11 +1,9 @@
 package controller;
 
 import db.MemoryUserRepository;
-import db.Repository;
 import model.User;
 import webserver.HttpRequest;
 import webserver.HttpResponse;
-import webserver.RequestHandler;
 
 import java.util.Map;
 import java.util.logging.Level;

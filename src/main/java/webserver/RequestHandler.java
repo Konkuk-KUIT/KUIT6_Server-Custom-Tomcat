@@ -1,35 +1,19 @@
 package webserver;
 
 import controller.*;
-import db.MemoryUserRepository;
-import db.Repository;
-import enumclasses.RedirectTarget;
-import model.User;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-
-import static enumclasses.RedirectTarget.LOGIN_FAILED;
-import static enumclasses.URL.*;
-import static enumclasses.URL.LOGIN;
-import static enumclasses.URL.SIGNUP;
-import static enumclasses.URL.USERLIST;
-import static enumclasses.UserFactor.*;
 
 public class RequestHandler implements Runnable {
     Socket connection;
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
-    private Controller controller = new ForwordController();
 
     public RequestHandler(Socket connection) {
         this.connection = connection;
     }
-
-    Repository repository = MemoryUserRepository.getInstance();
 
     @Override
     public void run() {

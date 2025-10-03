@@ -21,7 +21,7 @@ import static enumclasses.URL.LOGIN;
 public class HttpResponse {
     private static final Logger log = Logger.getLogger(HttpResponse.class.getName());
     private final DataOutputStream dos;
-    private Map<String, String> header = new HashMap<String,String>();
+    private Map<String, String> header = new HashMap<>();
 
     private HttpResponse(DataOutputStream dos) {
         this.dos = dos;
