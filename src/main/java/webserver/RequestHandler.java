@@ -1,52 +1,69 @@
 package webserver;
 
+import db.MemoryUserRepository;
+import db.Repository;
+import webserver.controller.Controller;
+import webserver.controller.StaticController;
+import webserver.controller.UserController;
+import webserver.enums.HttpStatus;
+
 import java.io.*;
 import java.net.Socket;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.*;
 
-public class RequestHandler implements Runnable{
-    Socket connection;
-    private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
+public class RequestHandler implements Runnable {
+    private final Socket connection;
+    private final Map<String, Controller> controllers = new HashMap<>();
+    private final String WEB_ROOT = "webapp";
 
     public RequestHandler(Socket connection) {
         this.connection = connection;
+
+        Repository repo = MemoryUserRepository.getInstance();
+
+        // URL → Controller 매핑
+        controllers.put("/user/signup", new UserController(repo, WEB_ROOT));
+        controllers.put("/user/login",  new UserController(repo, WEB_ROOT));
+        controllers.put("/user/list",   new UserController(repo, WEB_ROOT));
+        controllers.put("/user/userList", new UserController(repo, WEB_ROOT));
+
+        // 나머지 정적(폴더 프리픽스별로 세분도 가능)
+        controllers.put("/", new StaticController(WEB_ROOT)); // index.html용
+        // 별도 등록이 없으면 최종적으로 정적 처리로 흘리게 fallback할 예정
     }
 
     @Override
     public void run() {
-        log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
-        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            DataOutputStream dos = new DataOutputStream(out);
+        try (InputStream in = connection.getInputStream();
+             OutputStream out = connection.getOutputStream();
+             BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
 
-            byte[] body = "Hello World".getBytes();
-            response200Header(dos, body.length);
-            responseBody(dos, body);
+            HttpRequest req = HttpRequest.from(br);
+            HttpResponse res = new HttpResponse();
 
-        } catch (IOException e) {
-            log.log(Level.SEVERE,e.getMessage());
+            // 매핑
+            Controller c = controllers.get(req.path());
+            if (c == null) {
+                // prefix 기반으로 정적 처리: /qna/..., /user/form.html, /css/...
+                c = (r, rr) -> { throw new UserController.ForwardSignal(WEB_ROOT, r.path()); };
+            }
+
+            try {
+                c.service(req, res);
+                // Controller가 forward/redirect를 던지지 않고 직접 쓰고 싶다면 여기서 res.writeText 등 호출 가능
+                // 기본은 시그널 방식 사용
+                res.writeText(out, HttpStatus.NOT_FOUND, "<h1>404</h1>");
+            } catch (UserController.RedirectSignal redir) {
+                res.redirect(out, redir.location, redir.cookie);
+            } catch (UserController.ForwardSignal fwd) {
+                res.forward(out, fwd.webRoot, fwd.path);
+            } catch (StaticController.ForwardSignal fwd2) {
+                res.forward(out, fwd2.webRoot, fwd2.path);
+            }
+
+        } catch (Exception ignore) {
+        } finally {
+            try { connection.close(); } catch (IOException ignored) {}
         }
     }
-
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
-    private void responseBody(DataOutputStream dos, byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
 }
