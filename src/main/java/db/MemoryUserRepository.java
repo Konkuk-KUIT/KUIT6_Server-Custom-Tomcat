@@ -6,12 +6,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MemoryUserRepository implements Repository{
+public class MemoryUserRepository implements Repository {
     private final Map<String, User> users = new HashMap<>();
     private static MemoryUserRepository memoryUserRepository;
 
-    private MemoryUserRepository() {
-    }
+    private MemoryUserRepository() {    }
 
     public static MemoryUserRepository getInstance() {
         if (memoryUserRepository == null) {

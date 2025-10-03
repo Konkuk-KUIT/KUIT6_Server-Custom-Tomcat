@@ -1,49 +1,48 @@
 package webserver;
 
+import controller.Controller;
+import db.MemoryUserRepository;
+import model.User;
+import http.util.HttpRequestUtils;
+
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class RequestHandler implements Runnable{
-    Socket connection;
+public class RequestHandler implements Runnable {
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
+    private final Socket connection;
+    private final MemoryUserRepository repository = MemoryUserRepository.getInstance();
 
-    public RequestHandler(Socket connection) {
-        this.connection = connection;
+    public RequestHandler(Socket connectionSocket) {
+        this.connection = connectionSocket;
     }
 
-    @Override
     public void run() {
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
-        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            DataOutputStream dos = new DataOutputStream(out);
 
-            byte[] body = "Hello World".getBytes();
-            response200Header(dos, body.length);
-            responseBody(dos, body);
+        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
+            HttpRequest request = new HttpRequest(in);
+            HttpResponse response = new HttpResponse(out);
 
-        } catch (IOException e) {
-            log.log(Level.SEVERE,e.getMessage());
-        }
-    }
+            String path = request.getPath();
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
+            if ("/".equals(path)) {
+                path = "/index.html";
+            }
 
-    private void responseBody(DataOutputStream dos, byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
+            Controller controller = RequestMapping.getController(request.getMethod(), path);
+
+            if (controller == null) {
+                response.forward(path);
+            } else {
+                controller.process(request, response);
+            }
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
