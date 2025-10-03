@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,9 +16,8 @@ public class HttpResponse {
     private static final Logger log = Logger.getLogger(HttpResponse.class.getName());
 
     private final OutputStream out;
-    private final Map<String, String> headers = new HashMap<>();
-    private int statusCode = 200;
-    private String statusText = "OK";
+    private final Map<String, String> headers = new LinkedHashMap<>();
+    private HttpStatus status = HttpStatus.OK;
 
     public HttpResponse(OutputStream out) {
         this.out = out;
@@ -26,6 +25,10 @@ public class HttpResponse {
 
     public void addHeader(String key, String value) {
         headers.put(key, value);
+    }
+
+    public void addHeader(HttpHeader header, String value) {
+        addHeader(header.value(), value);
     }
 
     /** Forward a static file under ./webapp */
@@ -53,19 +56,20 @@ public class HttpResponse {
         }
 
         byte[] body = readAllBytes(target);
-        addHeader("Content-Type", contentType);
-        addHeader("Content-Length", String.valueOf(body.length));
+        status = HttpStatus.OK;
+        headers.clear();
+        addHeader(HttpHeader.CONTENT_TYPE, contentType);
+        addHeader(HttpHeader.CONTENT_LENGTH, String.valueOf(body.length));
         writeHead();
         writeBody(body);
     }
 
     public void response302Header(String location) throws IOException {
-        statusCode = 302;
-        statusText = "Found";
-        addHeader("Location", location);
+        status = HttpStatus.FOUND;
+        addHeader(HttpHeader.LOCATION, location);
         headers.entrySet().removeIf(entry -> {
             String key = entry.getKey();
-            return !("Location".equalsIgnoreCase(key) || "Set-Cookie".equalsIgnoreCase(key));
+            return !(HttpHeader.LOCATION.value().equalsIgnoreCase(key) || HttpHeader.SET_COOKIE.value().equalsIgnoreCase(key));
         });
         log.log(Level.INFO, "Send redirect to {0}", location);
         writeHead();
@@ -81,12 +85,12 @@ public class HttpResponse {
     }
 
     public void send404(String path) throws IOException {
-        statusCode = 404;
-        statusText = "Not Found";
+        status = HttpStatus.NOT_FOUND;
+        headers.clear();
         String notFound = "<h1>404 Not Found</h1>";
         byte[] body = notFound.getBytes();
-        addHeader("Content-Type", "text/html;charset=utf-8");
-        addHeader("Content-Length", String.valueOf(body.length));
+        addHeader(HttpHeader.CONTENT_TYPE, "text/html;charset=utf-8");
+        addHeader(HttpHeader.CONTENT_LENGTH, String.valueOf(body.length));
         log.log(Level.INFO, "Send 404 response path={0}", path);
         writeHead();
         writeBody(body);
@@ -94,7 +98,7 @@ public class HttpResponse {
 
     private void writeHead() throws IOException {
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
-        writer.write("HTTP/1.1 " + statusCode + " " + statusText + "\r\n");
+        writer.write("HTTP/1.1 " + status.code() + " " + status.reason() + "\r\n");
         for (Map.Entry<String, String> h : headers.entrySet()) {
             writer.write(h.getKey() + ": " + h.getValue() + "\r\n");
         }
