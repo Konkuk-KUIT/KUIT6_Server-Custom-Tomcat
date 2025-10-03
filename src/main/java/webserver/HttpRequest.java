@@ -110,4 +110,8 @@ public class HttpRequest {
         String filePath = getFilePath();
         return Files.readAllBytes(Paths.get(filePath));
     }
+
+    public String getUrl() {
+        return url;
+    }
 }
