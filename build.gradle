@@ -2,7 +2,7 @@ plugins {
     id 'java'
 }
 
-group = 'kuit6th'
+group = 'kuit.com'
 version = '1.0-SNAPSHOT'
 
 repositories {
