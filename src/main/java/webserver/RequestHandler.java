@@ -41,50 +41,9 @@ public class RequestHandler implements Runnable{
             String mimeTypes = httpRequest.getMimeType();
 
 
-            if (httpRequest.getHttpMethod().toString().equals("GET") && httpRequest.getUrl().endsWith(".html")) {
-                controller = new ForwardController();
-            }
+            RequestMapper requestMapper = new RequestMapper(httpRequest,httpResponse, br);
+            requestMapper.proceed();
 
-            if (httpRequest.getUrl().equals("/")) {
-                controller = new HomeController();
-            }
-
-
-            if (httpRequest.getUrl().equals("/user/signup")) {
-                controller = new SignUpController();
-                controller.setMemoryUserRepository(memoryUserRepository);
-            }
-
-
-            if (httpRequest.getUrl().equals("/user/login")) {
-                controller = new LoginController();
-                controller.setMemoryUserRepository(memoryUserRepository);
-            }
-
-            if(url.equals("/user/userlist")) {
-                String cookieHeader = null;
-                String line;
-                while ((line = br.readLine()) != null && !line.isEmpty()) {
-                    if (line.startsWith("Cookie:")) {
-                        cookieHeader = line.substring("Cookie:".length()).trim();
-                    }
-                }
-                if(cookieHeader != null && cookieHeader.contains("logined=true")) {
-                    memoryUserRepository.findAll().forEach(user -> log.info("USER:" + user.toString()));
-
-                    httpResponse.redirect("/user/list.html", null, url);
-                    return;
-                }
-                httpResponse.redirect("/index.html", null, url);
-                return;
-            }
-            if (httpRequest.getUrl().equals("/user/userList")) {
-                controller = new ListController(br);
-            }
-
-
-
-            controller.execute(httpRequest, httpResponse);
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
