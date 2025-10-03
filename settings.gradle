@@ -1,2 +1,4 @@
 rootProject.name = 'KUIT6_Server-Custom-Tomcat'
 
+
+include 'src:test:resources'

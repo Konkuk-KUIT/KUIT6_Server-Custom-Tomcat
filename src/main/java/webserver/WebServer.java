@@ -5,6 +5,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class WebServer {
@@ -13,6 +15,7 @@ public class WebServer {
     private static final Logger log = Logger.getLogger(WebServer.class.getName());
 
     public static void main(String[] args) throws IOException {
+
         int port = DEFAULT_PORT;
         ExecutorService service = Executors.newFixedThreadPool(DEFAULT_THREAD_NUM);
 
