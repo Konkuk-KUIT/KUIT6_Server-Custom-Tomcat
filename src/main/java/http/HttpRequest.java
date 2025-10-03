@@ -1,5 +1,7 @@
 package http;
 
+import http.util.IOUtils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 
@@ -15,5 +17,12 @@ public class HttpRequest {
     }
 
     public static HttpRequest from(BufferedReader br) throws IOException {
+        String requestLine = br.readLine();
+        if (requestLine == null || requestLine.isEmpty()) return null;
+
+        HttpHeader httpHeader = HttpHeader.from(br);
+        String body = IOUtils.readData(br, httpHeader.getLengthOfContent());
+
+        return new HttpRequest(HttpStartLine.from(requestLine), httpHeader, body);
     }
 }
