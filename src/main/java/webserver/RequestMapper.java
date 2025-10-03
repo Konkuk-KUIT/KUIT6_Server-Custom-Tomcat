@@ -15,7 +15,10 @@ public class RequestMapper {
     private final Controller defaultController = new ForwardController();
 
     public RequestMapper() {
-        controllers.put(UrlPath.ROOT.value(), new HomeController());
+        // controllers.put(UrlPath.ROOT.value(), new HomeController());
+        HomeController homeController = new HomeController();
+        controllers.put(UrlPath.ROOT.value(), homeController);
+        controllers.put(UrlPath.INDEX.value(), homeController);
         controllers.put(UrlPath.USER_SIGNUP.value(), new SignUpController());
         controllers.put(UrlPath.USER_LOGIN.value(), new LoginController());
         controllers.put(UrlPath.USER_LIST.value(), new ListController());

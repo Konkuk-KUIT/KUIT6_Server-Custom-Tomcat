@@ -4,6 +4,7 @@ public enum UrlPath {
     ROOT("/"),
     INDEX("/index.html"),
     USER_SIGNUP("/user/signup"),
+    USER_SIGNUP_FORM("/user/form.html"),
     USER_LOGIN("/user/login"),
     USER_LOGIN_PAGE("/user/login.html"),
     USER_LOGIN_FAILED("/user/login_failed.html"),

@@ -66,11 +66,14 @@ public class HttpResponse {
 
     public void response302Header(String location) throws IOException {
         status = HttpStatus.FOUND;
+        String setCookie = headers.get(HttpHeader.SET_COOKIE.value());
+        headers.clear();
         addHeader(HttpHeader.LOCATION, location);
-        headers.entrySet().removeIf(entry -> {
-            String key = entry.getKey();
-            return !(HttpHeader.LOCATION.value().equalsIgnoreCase(key) || HttpHeader.SET_COOKIE.value().equalsIgnoreCase(key));
-        });
+
+        addHeader(HttpHeader.CONTENT_LENGTH, "0");
+        if (setCookie != null) {
+            addHeader(HttpHeader.SET_COOKIE, setCookie);
+        }
         log.log(Level.INFO, "Send redirect to {0}", location);
         writeHead();
     }
