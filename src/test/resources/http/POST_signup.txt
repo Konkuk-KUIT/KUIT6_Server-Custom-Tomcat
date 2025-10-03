@@ -1,0 +1,6 @@
+POST /user/signup HTTP/1.1
+Host: localhost:8080
+Connection: keep-alive
+Content-Length: 57
+
+userId=test&password=1234&name=tester&email=test@test.com
