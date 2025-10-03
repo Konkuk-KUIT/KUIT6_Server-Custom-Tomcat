@@ -42,6 +42,12 @@ public class RequestHandler implements Runnable {
             System.out.println(uri);
             Path path = null;
             String cookie = null;
+            String contentType = "html";
+
+            //확장자에 따른 contentType 설정
+            if (uri.endsWith(".css")) {
+                contentType = "css";
+            }
 
             //GET 요청 읽어오기
             if (uri.equals("/") || uri.equals("/index.html")) {
@@ -109,7 +115,7 @@ public class RequestHandler implements Runnable {
             //uri="/user/login?userId=fsfs&password=fsf (get인 경우)
             /*uri이 /user/login/html 인 경우에도 이와 동일하므로 구분해주어야 함
             => 화면 요청하는 건 GET, 로그인 동작 시에는 POST */
-            if (uri.equals("/user/login")&&method.equals("POST")) {
+            if (uri.equals("/user/login") && method.equals("POST")) {
                 //params = "userId=fsfs&password=fsf"
                 String[] userInfo = params.split("[&=]");
 //                userInfo=> userId, fsfs, password, fsf 담고 있음
@@ -129,19 +135,24 @@ public class RequestHandler implements Runnable {
 
             if (uri.equals("/user/userList")) {
                 //header의 Cookie가 logined=true 일 때만
-                if(cookie!=null&&cookie.contains("logined=true")){
+                if (cookie != null && cookie.contains("logined=true")) {
                     path = Paths.get("./webapp/user/list.html");
-                }else {
+                } else {
                     response302Header(dos, "/user/login.html", null); //로그인 되지 않은 화면으로 리다렉트
                     return;
                 }
             }
 
-
+            //css 적용
+            if (uri.startsWith("./css")) {
+                path = Paths.get("./webapp/css/styles.css");
+                contentType = "css";
+            }
 
             if (path != null)
                 body = Files.readAllBytes(path);
-            response200Header(dos, body.length);
+
+                response200Header(dos, body.length, contentType);
             responseBody(dos, body);
 
 
@@ -150,10 +161,10 @@ public class RequestHandler implements Runnable {
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Type: text/" + contentType + ";charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
 
@@ -165,8 +176,8 @@ public class RequestHandler implements Runnable {
     private void response302Header(DataOutputStream dos, String path, String cookie) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            if(cookie!=null) {
-                dos.writeBytes("Set-Cookie: "+cookie+"; Path=/\r\n");
+            if (cookie != null) {
+                dos.writeBytes("Set-Cookie: " + cookie + "; Path=/\r\n");
             }
             dos.writeBytes("Location: " + path + "\r\n");
             dos.writeBytes("\r\n");
