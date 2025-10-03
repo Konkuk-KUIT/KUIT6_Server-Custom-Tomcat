@@ -33,4 +33,12 @@ public class HttpRequest {
     public String getUrl(){
         return startLine.getTarget();
     }
+
+    public String getBody() {
+        return body;
+    }
+
+    public HttpHeader getHeader(){
+        return header;
+    }
 }

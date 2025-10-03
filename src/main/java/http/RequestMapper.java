@@ -3,6 +3,7 @@ package http;
 import http.controller.*;
 import webserver.URL;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ public class RequestMapper {
         initializeMap();
         this.request = request;
         this.response = response;
-        if(request.getMethod().equals("GET") && request.getUrl().endsWith(".html")) {
+        if(request.getMethod().equals("get") && request.getUrl().endsWith(".html")) {
            this.controller = controllerMap.get("forward");
         }else this.controller = controllerMap.get(request.getUrl());
     }
@@ -24,12 +25,13 @@ public class RequestMapper {
     private void initializeMap(){
         controllerMap.put("forward",new ForwardController());
         controllerMap.put(URL.DEFAULT.getUrl(),new HomeController());
-        controllerMap.put(URL.DEFAULT.getUrl(),new SignUpController());
-        controllerMap.put(URL.DEFAULT.getUrl(),new LoginController());
-        controllerMap.put(URL.DEFAULT.getUrl(),new ListController());
+        controllerMap.put(URL.INDEX.getUrl(),new HomeController());
+        controllerMap.put(URL.USER_SIGNUP.getUrl(),new SignUpController());
+        controllerMap.put(URL.USER_LOGIN.getUrl(),new LoginController());
+        controllerMap.put(URL.USER_USERLIST.getUrl(),new ListController());
     }
 
-    public void proceed(){
+    public void proceed() throws IOException {
         controller.execute(request, response);
     }
 }

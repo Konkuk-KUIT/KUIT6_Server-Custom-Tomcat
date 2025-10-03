@@ -34,4 +34,8 @@ public class HttpHeader {
     public int getLengthOfContent() {
         return lengthOfContent;
     }
+
+    public List<String> getLines() {
+        return lines;
+    }
 }
