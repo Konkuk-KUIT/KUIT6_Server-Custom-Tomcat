@@ -20,7 +20,7 @@ public class HttpRequest {
     private String path;
     private String method;
     private int contentLength;
-    private boolean logined;
+    private boolean logined = false;
     private Map<String, String> header = new HashMap<String,String>();
     private Map<String, String> param = new HashMap<String,String>();
 
