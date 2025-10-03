@@ -1,6 +1,6 @@
-package db;
+package main.java.db;
 
-import model.User;
+import main.java.model.User;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -10,7 +10,7 @@ public class MemoryUserRepository implements Repository{
     private final Map<String, User> users = new HashMap<>();
     private static MemoryUserRepository memoryUserRepository;
 
-    private MemoryUserRepository() {
+    private MemoryUserRepository() {// 회원가입 시 url에 생기는 쿼리스트링을 받아오기
     }
 
     public static MemoryUserRepository getInstance() {

@@ -1,6 +1,6 @@
-package db;
+package main.java.db;
 
-import model.User;
+import main.java.model.User;
 
 import java.util.Collection;
 
