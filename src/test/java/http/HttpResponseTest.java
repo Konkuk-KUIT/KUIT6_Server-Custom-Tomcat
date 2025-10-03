@@ -8,6 +8,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class HttpResponseTest {
@@ -27,12 +28,13 @@ public class HttpResponseTest {
     }
 
     private String readFile(String name) throws IOException {
-        return Files.readString(BUILD_DIR.resolve(name), StandardCharsets.UTF_8);
+        return Files.readString(BUILD_DIR.resolve(name), UTF_8);
     }
 
     @Test
     void forward_ok_writes_status_headers_and_body() throws Exception {
-        Files.writeString(WEBAPP_DIR.resolve("index.html"), "HELLO", StandardCharsets.UTF_8);
+        String body = "HELLO";
+        Files.writeString(WEBAPP_DIR.resolve("index_test.html"), body, UTF_8);
 
         try (OutputStream out = outputStreamToFile("resp_forward_ok.txt")) {
             HttpResponse resp = new HttpResponse(out);
@@ -43,7 +45,7 @@ public class HttpResponseTest {
         assertThat(raw).startsWith(HttpStatus.OK.format());
         assertThat(raw).contains(HttpHeader.CONTENT_TYPE.getKey() + ": text/html");
         assertThat(raw).contains(HttpHeader.CONTENT_LENGTH.getKey() + ": 5");
-        assertThat(raw).endsWith("HELLO");
+        assertThat(raw).endsWith(body);
     }
 
     @Test

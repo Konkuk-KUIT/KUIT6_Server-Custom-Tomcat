@@ -10,7 +10,7 @@ public class HttpRequestTest {
 
     @Test
     void parse_post_form_urlencoded() throws Exception {
-        var br = TestUtil.bufferedReaderFromResource("test/resources/http/post_signup.txt");
+        var br = TestUtil.bufferedReaderFromResource("http/post_signup.txt");
         HttpRequest req = HttpRequest.from(br);
 
         assertThat(req.getMethod()).isEqualTo(HttpMethod.POST);
@@ -28,7 +28,7 @@ public class HttpRequestTest {
 
     @Test
     void parse_get_with_query() throws Exception {
-        var br = TestUtil.bufferedReaderFromResource("test/resources/http/get_with_query.txt");
+        var br = TestUtil.bufferedReaderFromResource("http/get_with_query.txt");
         HttpRequest req = HttpRequest.from(br);
 
         assertThat(req.getMethod()).isEqualTo(HttpMethod.GET);
@@ -40,7 +40,7 @@ public class HttpRequestTest {
 
     @Test
     void parse_cookie_header() throws Exception {
-        var br = TestUtil.bufferedReaderFromResource("test/resources/http/cookie_request.txt");
+        var br = TestUtil.bufferedReaderFromResource("http/cookie_request.txt");
         HttpRequest req = HttpRequest.from(br);
 
         assertThat(req.getCookie("logined")).isEqualTo("true");
