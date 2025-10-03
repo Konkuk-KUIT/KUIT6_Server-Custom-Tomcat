@@ -71,6 +71,10 @@ public class HttpRequest {
         return httpBody;
     }
 
+    public HttpMethod getHttpMethod() {
+        return httpMethod;
+    }
+
     public String getMimeType() {
         return MimeType;
     }

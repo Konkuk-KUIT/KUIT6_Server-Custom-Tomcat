@@ -1,5 +1,6 @@
 package webserver;
 
+import controller.*;
 import db.MemoryUserRepository;
 import http.HttpRequest;
 import http.HttpResponse;
@@ -20,7 +21,7 @@ import java.util.logging.Logger;
 public class RequestHandler implements Runnable{
     Socket connection;
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
-
+    private Controller controller;
     public RequestHandler(Socket connection) {
         this.connection = connection;
     }
@@ -40,38 +41,24 @@ public class RequestHandler implements Runnable{
             String mimeTypes = httpRequest.getMimeType();
 
 
-            if (url.equals("/")) {
-                url = "/index.html";
-                httpResponse.forward(mimeTypes, url);
-                return;
+            if (httpRequest.getHttpMethod().toString().equals("GET") && httpRequest.getUrl().endsWith(".html")) {
+                controller = new ForwardController();
             }
 
-            if(url.equals("/user/signup")) {
-                String body = httpRequest.getHttpBody();
-                String[] queryParamArr = body.split("&");
-                String userId = queryParamArr[0].split("=")[1];
-                String userPw = queryParamArr[1].split("=")[1];
-                String userName = queryParamArr[2].split("=")[1];
-                String userEmail = queryParamArr[3].split("=")[1];
-                User user = new User(userId, userPw, userName, userEmail);
-                memoryUserRepository.addUser(user);
-                httpResponse.redirect("/index.html", null, url);
-                return;
+            if (httpRequest.getUrl().equals("/")) {
+                controller = new HomeController();
             }
 
-            if(url.equals("/user/login")) {
 
-                String body = httpRequest.getHttpBody();
-                String[] queryParamArr = body.split("&");
-                String userId = queryParamArr[0].split("=")[1];
-                String userPw = queryParamArr[1].split("=")[1];
-                User user = memoryUserRepository.findUserById(userId);
-                if(user != null && userPw.equals(user.getPassword())) {
-                    httpResponse.redirect("/index.html", "logined=true; Path=/; HttpOnly", url);
-                    return;
-                }
-                httpResponse.redirect("/user/login_failed.html", null, url);
-                return;
+            if (httpRequest.getUrl().equals("/user/signup")) {
+                controller = new SignUpController();
+                controller.setMemoryUserRepository(memoryUserRepository);
+            }
+
+
+            if (httpRequest.getUrl().equals("/user/login")) {
+                controller = new LoginController();
+                controller.setMemoryUserRepository(memoryUserRepository);
             }
 
             if(url.equals("/user/userlist")) {
@@ -91,8 +78,13 @@ public class RequestHandler implements Runnable{
                 httpResponse.redirect("/index.html", null, url);
                 return;
             }
+            if (httpRequest.getUrl().equals("/user/userList")) {
+                controller = new ListController(br);
+            }
 
-            httpResponse.forward(mimeTypes, url);
+
+
+            controller.execute(httpRequest, httpResponse);
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
