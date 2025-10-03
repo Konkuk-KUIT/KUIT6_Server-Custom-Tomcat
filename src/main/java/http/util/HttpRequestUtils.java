@@ -17,4 +17,14 @@ public class HttpRequestUtils {
             return new HashMap<>();
         }
     }
+
+    public static Map<String, String> parseCookies(String cookieString) {
+        try {
+            String[] cookieStrings = cookieString.split(";");
+            return Arrays.stream(cookieStrings).map(q -> q.split("="))
+                    .collect(Collectors.toMap(logined -> logined[0], logined -> logined[1]));
+        } catch (Exception e) {
+            return new HashMap<>();
+        }
+    }
 }
