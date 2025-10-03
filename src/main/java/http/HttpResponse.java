@@ -1,9 +1,11 @@
 package http;
 
-import java.io.DataOutputStream;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,63 +14,115 @@ import java.util.logging.Logger;
 
 public class HttpResponse {
     private static final Logger log = Logger.getLogger(HttpResponse.class.getName());
-    private DataOutputStream dos;
-    private Map<String, String> headers = new HashMap<>();
+
+    private final OutputStream out;
+    private final Map<String, String> headers = new HashMap<>();
+    private int statusCode = 200;
+    private String statusText = "OK";
 
     public HttpResponse(OutputStream out) {
-        this.dos = new DataOutputStream(out);
+        this.out = out;
     }
 
     public void addHeader(String key, String value) {
         headers.put(key, value);
     }
 
-    public void forward(String url) {
+    /** Forward a static file under ./webapp */
+    public void forward(String path) throws IOException {
+        String resourcePath = (path == null) ? "" : path;
+        if (resourcePath.startsWith("/")) {
+            resourcePath = resourcePath.substring(1);
+        }
+
+        if (resourcePath.isEmpty()) {
+            send404(path);
+            return;
+        }
+
+        File webRoot = new File("./webapp").getCanonicalFile();
+        File target = new File(webRoot, resourcePath).getCanonicalFile();
+        if (!target.getPath().startsWith(webRoot.getPath()) || !target.exists() || target.isDirectory()) {
+            send404(resourcePath);
+            return;
+        }
+
+        String contentType = Files.probeContentType(target.toPath());
+        if (contentType == null) {
+            contentType = guessContentType(resourcePath);
+        }
+
+        byte[] body = readAllBytes(target);
+        addHeader("Content-Type", contentType);
+        addHeader("Content-Length", String.valueOf(body.length));
+        writeHead();
+        writeBody(body);
+    }
+
+    public void response302Header(String location) throws IOException {
+        statusCode = 302;
+        statusText = "Found";
+        addHeader("Location", location);
+        headers.entrySet().removeIf(entry -> {
+            String key = entry.getKey();
+            return !("Location".equalsIgnoreCase(key) || "Set-Cookie".equalsIgnoreCase(key));
+        });
+        log.log(Level.INFO, "Send redirect to {0}", location);
+        writeHead();
+    }
+
+    public void sendRedirect(String location) {
         try {
-            byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
-            if (url.endsWith(".css")) {
-                headers.put("Content-Type", "text/css");
-            } else if (url.endsWith(".js")) {
-                headers.put("Content-Type", "application/javascript");
-            } else {
-                headers.put("Content-Type", "text/html;charset=utf-8");
-            }
-            headers.put("Content-Length", String.valueOf(body.length));
-            response200Header();
-            responseBody(body);
+            response302Header(location);
+            // Redirect 응답은 보통 바디를 비웁니다.
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
 
-    public void sendRedirect(String url) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + url + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
+    public void send404(String path) throws IOException {
+        statusCode = 404;
+        statusText = "Not Found";
+        String notFound = "<h1>404 Not Found</h1>";
+        byte[] body = notFound.getBytes();
+        addHeader("Content-Type", "text/html;charset=utf-8");
+        addHeader("Content-Length", String.valueOf(body.length));
+        log.log(Level.INFO, "Send 404 response path={0}", path);
+        writeHead();
+        writeBody(body);
     }
 
-    private void response200Header() {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            for (String key : headers.keySet()) {
-                dos.writeBytes(key + ": " + headers.get(key) + "\r\n");
-            }
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
+    private void writeHead() throws IOException {
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
+        writer.write("HTTP/1.1 " + statusCode + " " + statusText + "\r\n");
+        for (Map.Entry<String, String> h : headers.entrySet()) {
+            writer.write(h.getKey() + ": " + h.getValue() + "\r\n");
         }
+        writer.write("\r\n");
+        writer.flush();
     }
 
-    private void responseBody(byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
+    private void writeBody(byte[] body) throws IOException {
+        out.write(body);
+        out.flush();
+    }
+
+    private static String guessContentType(String path) {
+        String p = path.toLowerCase();
+        if (p.endsWith(".html") || p.endsWith(".htm")) return "text/html;charset=utf-8";
+        if (p.endsWith(".css")) return "text/css";
+        if (p.endsWith(".js")) return "application/javascript";
+        if (p.endsWith(".png")) return "image/png";
+        if (p.endsWith(".jpg") || p.endsWith(".jpeg")) return "image/jpeg";
+        return "application/octet-stream";
+    }
+
+    private static byte[] readAllBytes(File f) throws IOException {
+        try (FileInputStream fis = new FileInputStream(f)) {
+            byte[] data = new byte[(int) f.length()];
+            int read = fis.read(data);
+            if (read != data.length) throw new IOException("Incomplete file read");
+            return data;
         }
     }
 }

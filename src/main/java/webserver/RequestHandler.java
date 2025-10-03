@@ -1,17 +1,18 @@
 package webserver;
-
 import db.MemoryUserRepository;
 import http.HttpRequest;
+import http.HttpResponse;
 import model.User;
-
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.file.Files;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class RequestHandler implements Runnable{
-    Socket connection;
+public class RequestHandler implements Runnable {
+    private final Socket connection;
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
 
     public RequestHandler(Socket connection) {
@@ -21,113 +22,114 @@ public class RequestHandler implements Runnable{
     @Override
     public void run() {
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
-        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
-            DataOutputStream dos = new DataOutputStream(out);
+        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             HttpRequest request = new HttpRequest(in);
+            HttpResponse response = new HttpResponse(out);
 
             String url = request.getPath();
 
-            if (request.getMethod().equals("POST") && url.equals("/user/signup")) {
+            if ("GET".equalsIgnoreCase(request.getMethod()) && url != null && url.startsWith("/user/signup")) {
+                log.log(Level.INFO, "GET signup request userId={0}", request.getParameter("userId"));
                 User user = new User(
                         request.getParameter("userId"),
                         request.getParameter("password"),
                         request.getParameter("name"),
                         request.getParameter("email"));
                 MemoryUserRepository.getInstance().addUser(user);
-                response302Header(dos, "/index.html");
+                log.log(Level.INFO, "User registered via GET userId={0}", user.getUserId());
+                response.response302Header("/index.html");
                 return;
             }
 
-            if (request.getMethod().equals("POST") && url.equals("/user/login")) {
-                User user = MemoryUserRepository.getInstance().findUserById(request.getParameter("userId"));
+            if ("POST".equalsIgnoreCase(request.getMethod()) && "/user/signup".equals(url)) {
+                log.log(Level.INFO, "POST signup request userId={0}", request.getParameter("userId"));
+                User user = new User(
+                        request.getParameter("userId"),
+                        request.getParameter("password"),
+                        request.getParameter("name"),
+                        request.getParameter("email"));
+                MemoryUserRepository.getInstance().addUser(user);
+                log.log(Level.INFO, "User registered via POST userId={0}", user.getUserId());
+                response.response302Header("/index.html");
+                return;
+            }
 
+            if ("POST".equalsIgnoreCase(request.getMethod()) && "/user/login".equals(url)) {
+                User user = MemoryUserRepository.getInstance().findUserById(request.getParameter("userId"));
+                log.log(Level.INFO, "Login attempt userId={0}", request.getParameter("userId"));
                 if (user != null && user.getPassword().equals(request.getParameter("password"))) {
-                    response302HeaderWithCookie(dos, "/index.html");
+                    response.addHeader("Set-Cookie", "logined=true");
+                    log.log(Level.INFO, "Login success userId={0}", user.getUserId());
+                    response.response302Header("/index.html");
                 } else {
-                    response302Header(dos, "/user/login_failed.html");
+                    log.log(Level.INFO, "Login failed userId={0}", request.getParameter("userId"));
+                    response.response302Header("/user/login_failed.html");
                 }
                 return;
             }
 
-
-            String path = url.split("\\?")[0];
-            if (path.equals("/")) {
-                path = "/index.html";
+            if (requiresLogin(url)) {
+                String logined = request.getCookie("logined");
+                if (!"true".equalsIgnoreCase(logined)) {
+                    log.log(Level.INFO, "Access denied (not logged in) url={0}", url);
+                    response.response302Header("/user/login.html");
+                    return;
+                }
+                log.log(Level.INFO, "Authenticated access url={0}", url);
             }
 
-            File file = new File("./webapp" + path);
-            if (!file.exists()) {
-                response404(dos);
+            String path = (url == null) ? "/" : url.split("\\?")[0];
+            if (path == null || path.isEmpty() || "/".equals(path)) {
+                path = "index.html";
+            } else if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+
+            File webRoot = new File("./webapp").getCanonicalFile();
+            String resourcePath = path;
+            File target = new File(webRoot, resourcePath).getCanonicalFile();
+
+            if (!target.getPath().startsWith(webRoot.getPath())) {
+                log.log(Level.INFO, "Blocked path traversal path={0}", path);
+                response.send404(path);
                 return;
             }
+            
+            if (!target.exists() || target.isDirectory()) {
+                int lastSlash = resourcePath.lastIndexOf('/');
+                int lastDot = resourcePath.lastIndexOf('.');
+                boolean hasExtension = lastDot > lastSlash;
 
-            String contentType = Files.probeContentType(file.toPath());
-            if (contentType == null) {
-                contentType = "application/octet-stream";
+                if (!hasExtension) {
+                    String candidate = resourcePath.endsWith("/") ? resourcePath + "index.html" : resourcePath + ".html";
+                    File fallback = new File(webRoot, candidate).getCanonicalFile();
+                    if (fallback.getPath().startsWith(webRoot.getPath()) && fallback.exists() && !fallback.isDirectory()) {
+                        resourcePath = candidate;
+                        target = fallback;
+                    }
+                }
+
+                if (!target.exists() || target.isDirectory()) {
+                    log.log(Level.INFO, "Static resource not found path={0}", resourcePath);
+                    response.send404(resourcePath);
+                    return;
+                }
             }
 
-            byte[] body = Files.readAllBytes(file.toPath());
-            response200Header(dos, body.length, contentType);
-            responseBody(dos, body);
+            log.log(Level.INFO, "Static resource response path={0}", resourcePath);
+            response.forward(resourcePath);
 
-        } catch (IOException e) {
-            log.log(Level.SEVERE,e.getMessage());
-        }
-    }
-
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String contentType) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: " + contentType + ";charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
 
-    private void response302Header(DataOutputStream dos, String path) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
+    private boolean requiresLogin(String url) {
+        if (url == null) {
+            return false;
         }
+        return "/user/list.html".equals(url)
+                || "/user/userList".equals(url)
+                || "/user/userList.html".equals(url);
     }
-
-    private void response302HeaderWithCookie(DataOutputStream dos, String path) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
-            dos.writeBytes("Set-Cookie: logined=true\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
-    private void responseBody(DataOutputStream dos, byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
-    private void response404(DataOutputStream dos) {
-        try {
-            String notFoundBody = "<h1>404 Not Found</h1>";
-            dos.writeBytes("HTTP/1.1 404 Not Found\r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + notFoundBody.getBytes().length + "\r\n");
-            dos.writeBytes("\r\n");
-            dos.writeBytes(notFoundBody);
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
 }
