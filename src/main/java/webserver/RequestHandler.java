@@ -1,7 +1,10 @@
 package webserver;
 
 import db.MemoryUserRepository;
+import http.constants.HttpHeader;
+import http.constants.HttpStatusCode;
 import http.util.IOUtils;
+import http.util.MimeTypes;
 import model.User;
 
 import java.io.*;
@@ -36,6 +39,7 @@ public class RequestHandler implements Runnable{
             log.info("Request: " + request);
             String[] tokens = request.split(" ");
             String url = tokens[1];
+            String mimeTypes = MimeTypes.fromFilename(url);
 
             if (url.equals("/")) {
                 url = "/index.html";
@@ -128,10 +132,10 @@ public class RequestHandler implements Runnable{
                 // 파일이 존재하면 파일 내용을 읽어옵니다.
                 body = Files.readAllBytes(filePath);
                 // 200 OK 응답 헤더를 작성합니다.
-                response200Header(dos, body.length);
+                response200Header(dos, mimeTypes, body.length);
             } else {
                 // 파일이 존재하지 않으면 404 Not Found 응답을 보냅니다.
-                body = "404 Not Found".getBytes();
+                body = HttpStatusCode.CLIENT_ERROR.toString().getBytes();
                 // 404 Not Found 응답 헤더를 작성합니다.
             }
 
@@ -147,11 +151,11 @@ public class RequestHandler implements Runnable{
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private void response200Header(DataOutputStream dos,String contentType, int lengthOfBodyContent) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes(HttpHeader.HTTP_VERSION +" "+ HttpStatusCode.SUCCESS+ "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_TYPE + ": "+ contentType + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH + ": " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -160,8 +164,8 @@ public class RequestHandler implements Runnable{
 
     public void response302Header(DataOutputStream dos, String path) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes(HttpHeader.HTTP_VERSION + " "+ HttpStatusCode.REDIRECT + "\r\n");
+            dos.writeBytes(HttpHeader.LOCATION + ": " + path + "\r\n");
             dos.writeBytes("\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {}
@@ -169,10 +173,10 @@ public class RequestHandler implements Runnable{
 
     public void response302Header(DataOutputStream dos, String path, String setCookie) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes(HttpHeader.HTTP_VERSION + " "+ HttpStatusCode.REDIRECT + "\r\n");
+            dos.writeBytes(HttpHeader.LOCATION + ": " + path + "\r\n");
             if (setCookie != null && !setCookie.isEmpty()) {
-                dos.writeBytes("Set-Cookie: " + setCookie + "\r\n");
+                dos.writeBytes(HttpHeader.SET_COOKIE + ": " + setCookie + "\r\n");
             }
             dos.writeBytes("\r\n");
         } catch (IOException e) {}
