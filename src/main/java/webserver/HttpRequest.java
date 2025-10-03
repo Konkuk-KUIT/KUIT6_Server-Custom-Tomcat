@@ -2,6 +2,8 @@ package webserver;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 
 public class HttpRequest {
@@ -102,5 +104,10 @@ public class HttpRequest {
 
     public String getReqBody() {
         return reqBody;
+    }
+
+    public byte[] getByteBody() throws IOException {
+        String filePath = getFilePath();
+        return Files.readAllBytes(Paths.get(filePath));
     }
 }
