@@ -1,11 +1,11 @@
 package webserver;
 
-import controller.*;
 import http.request.HttpRequest;
 import http.response.HttpResponse;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,23 +27,12 @@ public class RequestHandler implements Runnable {
             HttpRequest httpRequest = HttpRequest.from(br);
             HttpResponse httpResponse = new HttpResponse(dos);
 
-            Controller controller;
-            String path = httpRequest.getPath();
-
-            if (path.equals("/user/signup")) {
-                controller = new SignUpController();
-            } else if (path.equals("/user/login")) {
-                controller = new LoginController();
-            } else if (path.equals("/user/userList")) {
-                controller = new UserListController();
-            } else {
-                controller = new StaticFileController();
-            }
-
-            controller.execute(httpRequest, httpResponse);
+            RequestMapper requestMapper = new RequestMapper(httpRequest, httpResponse);
+            requestMapper.proceed();
 
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
+            System.out.println(Arrays.toString(e.getStackTrace()));
         }
     }
 
