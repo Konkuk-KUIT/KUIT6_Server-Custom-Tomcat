@@ -5,6 +5,7 @@ import http.HttpResponse;
 import http.enums.RequestPath;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -16,7 +17,7 @@ public class UserListController implements Controller {
         String cookieValue = request.getCookie();
         
         // Cookie에서 로그인 상태 확인
-        if (cookieValue != null && cookieValue.contains("logined=true")) {
+        if (cookieValue != null && Objects.equals(parseCookieValue(cookieValue, "logined"), "true")) {
             // 로그인된 사용자: user/list.html 파일 forward
             log.log(Level.INFO, "Logged in user accessing user list");
             response.forward(RequestPath.USER_LIST_HTML.getValue());
@@ -25,5 +26,15 @@ public class UserListController implements Controller {
             log.log(Level.INFO, "Non-logged user redirected to login page");
             response.redirect(RequestPath.USER_LOGIN_HTML.getValue());
         }
+    }
+
+    private String parseCookieValue(String cookie, String key) {
+        for (String pair : cookie.split(";\\s*")) {
+            String[] kv = pair.split("=", 2);
+            if (kv.length == 2 && kv[0].equals(key)) {
+                return kv[1];
+            }
+        }
+        return null;
     }
 }

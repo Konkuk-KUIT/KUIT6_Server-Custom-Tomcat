@@ -26,6 +26,6 @@ public enum RequestPath {
                 return requestPath;
             }
         }
-        return null;
+        throw new IllegalArgumentException("Unknown request path: " + path);
     }
 }

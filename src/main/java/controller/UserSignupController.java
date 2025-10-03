@@ -25,13 +25,22 @@ public class UserSignupController implements Controller {
         params = HttpRequestUtils.parseQueryParameter(request.getBody());
         log.log(Level.INFO, "POST Signup params: " + params);
 
+        // 필수 필드 검증
+        String userId = params.get (UserField.USER_ID.getValue());
+        String password = params.get (UserField. PASSWORD.getValue());
+        String name = params.get (UserField.NAME.getValue());
+        String email = params.get (UserField.EMAIL.getValue());
+
+        if (userId == null || userId.trim().isEmpty() ||
+                password == null || password. length() < 4 ||
+                name == null || name.trim().isEmpty() ||
+                email == null || !email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            // TODO: Bad Request
+            return;
+        }
+
         // User 객체 생성
-        User newUser = new User(
-                params.get(UserField.USER_ID.getValue()),
-                params.get(UserField.PASSWORD.getValue()),
-                params.get(UserField.NAME.getValue()),
-                params.get(UserField.EMAIL.getValue())
-        );
+        User newUser = new User(userId, password, name, email);
 
         // 메모리 저장소에 저장
         MemoryUserRepository repository = MemoryUserRepository.getInstance();

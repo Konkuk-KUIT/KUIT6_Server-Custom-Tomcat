@@ -21,7 +21,7 @@ public class HttpHeaders {
         while ((line = br.readLine()) != null && !line.isEmpty()) {
             int colonIndex = line.indexOf(":");
             if (colonIndex != -1) {
-                String key = line.substring(0, colonIndex).trim();
+                String key = line.substring(0, colonIndex).trim().toLowerCase();
                 String value = line.substring(colonIndex + 1).trim();
                 headerMap.put(key, value);
             }
@@ -31,16 +31,23 @@ public class HttpHeaders {
     }
 
     public String getHeader(HttpHeader header) {
-        return headers.get(header.getValue());
+        return headers.get(header.getValue().toLowerCase());
     }
 
     public String getHeader(String headerName) {
-        return headers.get(headerName);
+        return headers.get(headerName.toLowerCase());
     }
 
     public int getContentLength() {
         String contentLength = getHeader(HttpHeader.CONTENT_LENGTH);
-        return contentLength != null ? Integer.parseInt(contentLength) : 0;
+        if (contentLength == null) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(contentLength);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     public String getCookie() {

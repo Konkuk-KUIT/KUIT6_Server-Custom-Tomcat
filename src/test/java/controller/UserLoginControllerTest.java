@@ -32,7 +32,7 @@ public class UserLoginControllerTest {
         MockitoAnnotations.openMocks(this);
         controller = new UserLoginController();
         repository = MemoryUserRepository.getInstance();
-        
+
         // 테스트용 사용자 미리 등록
         User testUser = new User("testuser", "1234", "홍길동", "test@example.com");
         repository.addUser(testUser);

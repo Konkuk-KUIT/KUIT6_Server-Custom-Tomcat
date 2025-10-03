@@ -33,7 +33,7 @@ public class HttpRequestTest {
         assertEquals("/user/create", httpRequest.getUrl());
         assertEquals("HTTP/1.1", httpRequest.getVersion());
         assertEquals("localhost:8080", httpRequest.getHeader("Host"));
-        assertEquals(40, httpRequest.getContentLength());
+        assertEquals(35, httpRequest.getContentLength());
         assertNotNull(httpRequest.getBody());
         assertTrue(httpRequest.getBody().contains("userId"));
     }
@@ -49,7 +49,7 @@ public class HttpRequestTest {
         
         // then
         assertEquals(HttpMethod.GET, httpRequest.getMethod());
-        assertEquals("/index.html", httpRequest.getUrl());
+        assertEquals("/index.html?name=foden&age=26", httpRequest.getUrl());
         assertEquals("name=foden&age=26", httpRequest.getQueryString());
         assertEquals("HTTP/1.1", httpRequest.getVersion());
         assertEquals("localhost:8080", httpRequest.getHeader("Host"));

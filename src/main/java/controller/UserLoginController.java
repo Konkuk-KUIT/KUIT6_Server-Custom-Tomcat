@@ -19,10 +19,13 @@ public class UserLoginController implements Controller {
     @Override
     public void execute(HttpRequest request, HttpResponse response) throws IOException {
         Map<String, String> params = HttpRequestUtils.parseQueryParameter(request.getBody());
-        log.log(Level.INFO, "Login params: " + params);
 
         String userId = params.get(UserField.USER_ID.getValue());
         String password = params.get(UserField.PASSWORD.getValue());
+
+        if (userId != null && !userId.isEmpty()) {
+            log.log(Level.INFO, "Login attempt: " + userId);
+        }
 
         // 파라미터 유효성 검사
         if (userId == null || userId.isEmpty() || password == null || password.isEmpty()) {

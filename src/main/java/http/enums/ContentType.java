@@ -1,5 +1,7 @@
 package http.enums;
 
+import java.util.Locale;
+
 public enum ContentType {
     TEXT_HTML("text/html;charset=utf-8"),
     TEXT_CSS("text/css"),
@@ -18,13 +20,15 @@ public enum ContentType {
     }
 
     public static ContentType fromFileExtension(String filePath) {
-        if (filePath.endsWith(".css")) {
+        String normalized = filePath.split("\\?")[0].toLowerCase(Locale.ROOT);
+
+        if (normalized.endsWith(".css")) {
             return TEXT_CSS;
-        } else if (filePath.endsWith(".js")) {
+        } else if (normalized.endsWith(".js")) {
             return APPLICATION_JAVASCRIPT;
-        } else if (filePath.endsWith(".png")) {
+        } else if (normalized.endsWith(".png")) {
             return IMAGE_PNG;
-        } else if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) {
+        } else if (normalized.endsWith(".jpg") || normalized.endsWith(".jpeg")) {
             return IMAGE_JPEG;
         } else {
             return TEXT_HTML;

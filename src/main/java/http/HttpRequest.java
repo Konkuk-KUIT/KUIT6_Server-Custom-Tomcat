@@ -39,7 +39,7 @@ public class HttpRequest {
     }
 
     public String getUrl() {
-        return startLine.getPathWithoutQuery();
+        return startLine.getPath();
     }
 
     public String getPath() {

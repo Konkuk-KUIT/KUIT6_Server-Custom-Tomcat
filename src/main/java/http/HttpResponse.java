@@ -24,7 +24,20 @@ public class HttpResponse {
     }
 
     public void forward(String path) throws IOException {
+        // 경로 정규화 및 검증
+        if (path.contains("..")) {
+            notFound();
+            return;
+        }
+
         String filePath = webappPath + path;
+
+        // 파일 존재 확인
+        if (!Files.exists(Paths.get(filePath))) {
+            notFound();
+            return;
+        }
+
         byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
         String contentType = ContentType.fromFileExtension(filePath).getValue();
         
