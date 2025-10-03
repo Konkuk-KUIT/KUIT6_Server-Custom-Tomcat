@@ -13,16 +13,16 @@ public class HttpRequest {
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
     private HttpMethod httpMethod;
     private String url;
-    private String HttpVersion;
+    private String httpVersion;
     private String MimeType;
-    private String HttpBody;
+    private String httpBody;
 
-    private HttpRequest(HttpMethod httpMethod, String url, String HttpVersion, String MimeType, String body) {
+    private HttpRequest(HttpMethod httpMethod, String url, String httpVersion, String mimeType, String body) {
         this.httpMethod = httpMethod;
         this.url = url;
-        this.HttpVersion = HttpVersion;
-        this.MimeType = MimeType;
-        this.HttpBody = body;
+        this.httpVersion = httpVersion;
+        this.MimeType = mimeType;
+        this.httpBody = body;
     }
 
     public static HttpRequest from(BufferedReader br) {
@@ -65,6 +65,10 @@ public class HttpRequest {
 
     public String getUrl() {
         return url;
+    }
+
+    public String getHttpBody() {
+        return httpBody;
     }
 
     public String getMimeType() {
