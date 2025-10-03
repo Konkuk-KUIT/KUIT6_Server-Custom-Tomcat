@@ -1,6 +1,7 @@
 package webserver;
 
 import db.MemoryUserRepository;
+import http.util.IOUtils;
 import model.User;
 
 import java.io.*;
@@ -29,46 +30,68 @@ public class RequestHandler implements Runnable {
 
             byte[] body = "Hello World".getBytes();
 
-            //요청 읽어오기
             String request = br.readLine(); //한 줄 받아와서 검사
             if (request == null) return;
 
             String[] tokens = request.split(" ");
-            String token = tokens[1]; //2번째 요소가 "/index.html" 과 같은 형식
+            String method = tokens[0]; //get/post
+            String uri = tokens[1]; //2번째 요소가 "/index.html" 과 같은 형식
+            String params = null;
 
-            System.out.println(token);
+            System.out.println(uri);
             Path path = null;
 
-            if (token.equals("/") || token.equals("/index.html")) {
+            //GET 요청 읽어오기
+            if (uri.equals("/") || uri.equals("/index.html")) {
                 //파일 경로 읽어오기
                 path = Paths.get("./webapp/index.html");
                 //파일 내용을 byte로 변환하여 담아줌
-//                body = Files.readAllBytes(path);
             }
 
             //마찬가지로 다른 html 파일 띄우기
-            if (token.equals("/user/form.html")) {
+            if (uri.equals("/user/form.html")) {
                 path = Paths.get("./webapp/user/form.html");
             }
-            if (token.equals("/user/list.html")) {
+            if (uri.equals("/user/list.html")) {
                 path = Paths.get("./webapp/user/list.html");
             }
-            if (token.equals("/user/login.html")) {
+            if (uri.equals("/user/login.html")) {
                 path = Paths.get("./webapp/user/login.html");
             }
-            if (token.equals("/user/login_failed.html")) {
+            if (uri.equals("/user/login_failed.html")) {
                 path = Paths.get("./webapp/user/login_failed.html");
             }
 
 
+            //post 요청 읽어오기
+            int requestContentLength = 0;
+            while (true) {
+                final String line = br.readLine();
+                if (line.equals("")) {
+                    break;
+                }
+                // header info
+                if (line.startsWith("Content-Length")) {
+                    requestContentLength = Integer.parseInt(line.split(": ")[1]);
+                }
+            }
+//            IOUtils ioUtils = new IOUtils(br, requestContentLength);
+            if(method.equals("POST")){
+                IOUtils ioUtils = IOUtils.getInstance();
+                params = ioUtils.readData(br, requestContentLength); //"userId=abc&password=123&name=kim" 를 반환함
+            }
+            if(method.equals("GET")&&uri.contains("?")){
+                params = uri.split("\\?")[1];
+            }
+
 
             //get 요청 중 querystring 형식 오는 것을 확인
-            //token="/user/signup?userId=fsfs&password=fsf&name=fsfs&email=sally_0113%40naver.com"
-            String[] queryString = token.split("\\?");
-            if (queryString[0].equals("/user/signup")) {
+            //uri="/user/signup?userId=fsfs&password=fsf&name=fsfs&email=sally_0113%40naver.com"
+            String[] queryString = uri.split("\\?");
+
+            if(uri.startsWith("/user/signup")){
                 //들어온 정보를 parsing 하여 User instance 생성
-                //queryString[1] = "userId=fsfs&password=fsf&name=fsfs&email=sally_0113%40naver.com"
-                String[] userInfo = queryString[1].split("[&=]");
+                String[] userInfo = params.split("[&=]");
                 //userInfo[] => userId, fsfs, password, fsf, name, fsfs, email, sally~
                 //public User(String userId, String password, String name, String email) {
                 String userId = userInfo[1];
@@ -78,7 +101,6 @@ public class RequestHandler implements Runnable {
                 User user = new User(userId, password, name, email);
 
                 //만든 user instance 를 MemoryUserRepository 에 저장 후 index.html 반환
-                //회원가입 시 user 저장
                 MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance();
                 memoryUserRepository.addUser(user);
                 //302 로 리다이렉트
@@ -89,6 +111,7 @@ public class RequestHandler implements Runnable {
                 body = Files.readAllBytes(path);
             response200Header(dos, body.length);
             responseBody(dos, body);
+
 
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
@@ -101,6 +124,7 @@ public class RequestHandler implements Runnable {
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
+
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
@@ -109,9 +133,9 @@ public class RequestHandler implements Runnable {
     private void response302Header(DataOutputStream dos, String path) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: "+path+"\r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
             dos.writeBytes("\r\n");
-        }catch(Exception e){
+        } catch (Exception e) {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
