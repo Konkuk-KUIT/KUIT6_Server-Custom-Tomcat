@@ -1,5 +1,6 @@
 package model;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class User {
@@ -8,11 +9,15 @@ public class User {
     private String name;
     private String email;
 
-    public User(String userId, String password, String name, String email) {
+    private User(String userId, String password, String name, String email) {
         this.userId = userId;
         this.password = password;
         this.name = name;
         this.email = email;
+    }
+
+    public static User factory(Map<String, String> userInfoMap) {
+         return new User(userInfoMap.get(QueryKey.userId.name()), userInfoMap.get(QueryKey.password.name()), userInfoMap.get(QueryKey.name.name()),  userInfoMap.get(QueryKey.email.name()));
     }
 
     public String getUserId() {
@@ -29,6 +34,10 @@ public class User {
 
     public String getEmail() {
         return email;
+    }
+
+    public boolean isLogin(String id, String password) {
+        return this.userId.equals(id) && this.password.equals(password);
     }
 
     @Override
