@@ -25,19 +25,29 @@ public class SignUpController implements Controller {
             return;
         }
 
-        String userId = request.getParameter(UserQueryKey.USER_ID.key());
-        if (userId == null || userId.isEmpty()) {
-            response.response302Header(UrlPath.INDEX.value());
+        String userId = normalized(request, UserQueryKey.USER_ID);
+        String password = normalized(request, UserQueryKey.PASSWORD);
+        String name = normalized(request, UserQueryKey.NAME);
+        String email = normalized(request, UserQueryKey.EMAIL);
+
+        if (userId.isEmpty() || password.isEmpty() || name.isEmpty() || email.isEmpty()) {
+            log.log(Level.WARNING, "Missing sign-up parameters method={0} userId={1}", new Object[]{method, userId});
+            response.response302Header(UrlPath.USER_SIGNUP_FORM.value());
             return;
         }
 
         User user = new User(
                 userId,
-                request.getParameter(UserQueryKey.PASSWORD.key()),
-                request.getParameter(UserQueryKey.NAME.key()),
-                request.getParameter(UserQueryKey.EMAIL.key()));
+                password,
+                name,
+                email);
         repository.addUser(user);
         log.log(Level.INFO, "User signup method={0} userId={1}", new Object[]{method, user.getUserId()});
         response.response302Header(UrlPath.INDEX.value());
+    }
+
+    private String normalized(HttpRequest request, UserQueryKey key) {
+        String value = request.getParameter(key.key());
+        return value == null ? "" : value.trim();
     }
 }
