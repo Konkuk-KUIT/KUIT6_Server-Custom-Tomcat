@@ -18,4 +18,19 @@ public class IOUtils {
         br.read(body, 0, contentLength);
         return String.copyValueOf(body);
     }
+
+    public static String getCookieValue(String cookies, String key) {
+        if (cookies == null || key == null) return null;
+
+        String[] pairs = cookies.split(";");
+        for (String pair : pairs) {
+            String[] kv = pair.trim().split("=", 2); // = 기준, 최대 2개
+            if (kv.length == 2) {
+                if (kv[0].trim().equals(key)) {
+                    return kv[1].trim();
+                }
+            }
+        }
+        return null;
+    }
 }
