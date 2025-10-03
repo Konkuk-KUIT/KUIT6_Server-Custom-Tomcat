@@ -1,17 +1,11 @@
 package webserver;
 
-import db.MemoryUserRepository;
-import http.enums.HttpHeader;
-import http.enums.HttpMethod;
-import http.enums.HttpStatus;
+import controller.*;
 import http.request.HttpRequest;
 import http.response.HttpResponse;
-import model.User;
-import model.UserQueryKey;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,57 +27,20 @@ public class RequestHandler implements Runnable {
             HttpRequest httpRequest = HttpRequest.from(br);
             HttpResponse httpResponse = new HttpResponse(dos);
 
-            HttpMethod method = httpRequest.getMethod();
+            Controller controller;
             String path = httpRequest.getPath();
-            Map<String, String> params = httpRequest.getParams();
-            String cookie = httpRequest.getHeaders().get(HttpHeader.COOKIE.getValue());
 
-            // [요구사항 6] 사용자 목록 출력
-            if (path.startsWith("/user/userList")) {
-                if (cookie != null && cookie.contains("logined=true")) {
-                    httpResponse.forward("/user/list.html");
-                } else {
-                    httpResponse.redirect("/user/login.html");
-                }
-                return;
-            }
-
-            // [요구사항 5] 로그인 처리
-            if (path.startsWith("/user/login") && method == HttpMethod.POST) {
-                String userId = params.get(UserQueryKey.USER_ID.getKey());
-                String password = params.get(UserQueryKey.PASSWORD.getKey());
-
-                User user = MemoryUserRepository.getInstance().findUserById(userId);
-                if (user != null && password.equals(user.getPassword())) {
-                    //response302LoginSuccessHeader(dos, "/index.html");
-                    httpResponse.redirectSuccessLogin("/index.html");
-                } else {
-                    httpResponse.redirect("/user/login_failed.html");
-                }
-                return;
-            }
-
-            // 회원가입 처리
-            if (path.startsWith("/user/signup")) {
-                User user = new User(
-                        params.get(UserQueryKey.USER_ID.getKey()),
-                        params.get(UserQueryKey.PASSWORD.getKey()),
-                        params.get(UserQueryKey.NAME.getKey()),
-                        params.get(UserQueryKey.EMAIL.getKey())
-                );
-
-                MemoryUserRepository.getInstance().addUser(user);
-                httpResponse.redirect("/index.html");
-                return;
-            }
-
-
-            // [요구사항 1 + 7] 정적 파일 요청일 경우
-            if (path.equals("/")) {
-                httpResponse.forward("/index.html");
+            if (path.equals("/user/signup")) {
+                controller = new SignUpController();
+            } else if (path.equals("/user/login")) {
+                controller = new LoginController();
+            } else if (path.equals("/user/userList")) {
+                controller = new UserListController();
             } else {
-                httpResponse.forward(path);
+                controller = new StaticFileController();
             }
+
+            controller.execute(httpRequest, httpResponse);
 
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
