@@ -1,5 +1,8 @@
 package webserver;
 
+import constant.HttpHeader;
+import constant.HttpStatus;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -7,18 +10,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class HttpResponse {
-    private DataOutputStream dos;
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
 
 
-    public HttpResponse(OutputStream out) {
-        this.dos = new DataOutputStream(out);
+    public HttpResponse() {
     }
-    public void response200Header( byte[] body) {
+
+    public static void writeResponse(DataOutputStream dos, HttpStatus status, String contentType, byte[] body) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + body.length + "\r\n");
+            dos.writeBytes(status.getStatusLine());
+            dos.writeBytes(HttpHeader.CONTENT_TYPE.key() + ": " + contentType + "\r\n");
+            dos.writeBytes(HttpHeader.CONTENT_LENGTH.key() + ": " + body.length + "\r\n");
             dos.writeBytes("\r\n");
             dos.write(body);
             dos.flush();
@@ -27,30 +29,10 @@ public class HttpResponse {
         }
     }
 
-    public void responseBody( byte[] body) {
+    public static void writeRedirect(DataOutputStream dos, String location) {
         try {
-            dos.write(body, 0, body.length);
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-
-    public void response302Header(String path) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
-            dos.writeBytes("\r\n");
-            dos.flush();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, e.getMessage());
-        }
-    }
-    public void response302HeaderWithCookie( String path) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Location: " + path + "\r\n");
-            dos.writeBytes("Set-Cookie: logined=true\r\n");  //
+            dos.writeBytes(HttpStatus.FOUND.getStatusLine());
+            dos.writeBytes(HttpHeader.LOCATION.key() + ": " + location + "\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
@@ -58,15 +40,19 @@ public class HttpResponse {
         }
     }
 
-    public void responseCssHeader(byte[] body) {
+    public static void writeRedirectWithCookie(DataOutputStream dos, String location, String cookie) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK\r\n");
-            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + body.length + "\r\n");
+            dos.writeBytes(HttpStatus.FOUND.getStatusLine());
+            dos.writeBytes(HttpHeader.LOCATION.key() + ": " + location + "\r\n");
+            dos.writeBytes(HttpHeader.SET_COOKIE.key() + ": " + cookie + "\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
     }
+
+
+
+
 }

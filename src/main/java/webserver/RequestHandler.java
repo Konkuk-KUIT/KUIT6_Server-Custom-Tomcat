@@ -1,5 +1,8 @@
 package webserver;
 
+import constant.HttpContentType;
+import constant.HttpStatus;
+import constant.Url;
 import db.MemoryUserRepository;
 import http.util.HttpRequestUtils;
 import model.User;
@@ -27,7 +30,6 @@ public class RequestHandler implements Runnable{
         log.log(Level.INFO, "New Client Connect! Connected IP : " + connection.getInetAddress() + ", Port : " + connection.getPort());
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
             HttpRequest request = new HttpRequest(in);
-            HttpResponse response = new HttpResponse(out);
             DataOutputStream dos = new DataOutputStream(out);
             MemoryUserRepository userDB = MemoryUserRepository.getInstance();
             String path = request.getPath();
@@ -38,27 +40,26 @@ public class RequestHandler implements Runnable{
 
 
 
+
             //여기가 지금
-            if (path.equals("/") || path.equals("/index.html")) {
+            if (path.equals(Url.ROOT.path()) || path.equals(Url.INDEX.path())) {
                 // index.html 반환
 
-                byte[] bodyFile = Files.readAllBytes(Paths.get("./webapp/index.html"));
-                response.response200Header(bodyFile);
-                response.responseBody(bodyFile);
+                byte[] bodyFile = Files.readAllBytes(Paths.get(Url.ROOT.filePath()));
+                HttpResponse.writeResponse(dos, HttpStatus.OK,HttpContentType.HTML.value(), bodyFile);
             }
             else if (path.endsWith(".css")) {
-                // ✅ CSS 파일 처리
-                byte[] bodyFile = Files.readAllBytes(Paths.get("./webapp" + path));
-                response.responseCssHeader( bodyFile);
-                response.responseBody( bodyFile);
+                byte[] bodyFile = Files.readAllBytes(Paths.get(Url.CSS.filePath() + path));
+                HttpResponse.writeResponse(dos, HttpStatus.OK, HttpContentType.CSS.value(), bodyFile);
+
             }
-            else if (path.equals("/user/form.html")) {
+            else if (path.equals(Url.USER_FORM.path())) {
                 // 회원가입 폼 반환
-                byte[] bodyFile = Files.readAllBytes(Paths.get("./webapp/user/form.html"));
-                response.response200Header( bodyFile);
-                response.responseBody(bodyFile);
+                byte[] bodyFile = Files.readAllBytes(Paths.get(Url.USER_FORM.filePath()));
+                HttpResponse.writeResponse(dos, HttpStatus.OK,HttpContentType.HTML.value(), bodyFile);
+
             }
-            else if (path.startsWith("/user/signup")) {
+            else if (path.startsWith(Url.USER_SIGNUP.path())) {
 
                 Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
                 String userId = params.get("userId");
@@ -67,20 +68,20 @@ public class RequestHandler implements Runnable{
                 String email = params.get("email");
                 userDB.addUser(new User(userId, password, name, email));
                 User existingUser = userDB.findUserById(userId);
-                response.response302Header( "/index.html");
+                HttpResponse.writeRedirect(dos,Url.INDEX.path());
             }
-            else if (path.equals("/user/login.html")) {
-                byte[] bodyFile = Files.readAllBytes(Paths.get("./webapp/user/login.html"));
-                response.response200Header( bodyFile);
-                response.responseBody( bodyFile);
+            else if (path.equals(Url.USER_LOGIN_HTML.path())) {
+                byte[] bodyFile = Files.readAllBytes(Paths.get(Url.USER_LOGIN_HTML.filePath()));
+                HttpResponse.writeResponse(dos, HttpStatus.OK, HttpContentType.HTML.value(), bodyFile);
+
             }
-            else if(path.equals("/user/login_failed.html")){
-                byte[] bodyFile = Files.readAllBytes(Paths.get("./webapp/user/login_failed.html"));
-                response.response200Header( bodyFile);
-                response.responseBody(bodyFile);
+            else if(path.equals(Url.USER_LOGIN_FAILED.path())){
+                byte[] bodyFile = Files.readAllBytes(Paths.get(Url.USER_LOGIN_FAILED.filePath()));
+                HttpResponse.writeResponse(dos, HttpStatus.OK,HttpContentType.HTML.value(), bodyFile);
+
             }
 
-            else if (path.equals("/user/login")) {
+            else if (path.equals(Url.USER_LOGIN.path())) {
                 if (method.equals("POST")) {
                     Map<String, String> params = HttpRequestUtils.parseQueryParameter(body);
 
@@ -91,21 +92,20 @@ public class RequestHandler implements Runnable{
                     // 로그인 검증
                     if (existingUser != null) {
                         // 로그인 성공
-                        response.response302HeaderWithCookie("/index.html"); // 홈으로 리다이렉트
+                        HttpResponse.writeRedirectWithCookie(dos,Url.INDEX.path(), "logined=true");
                     } else {
                         // 로그인 실패
-                        response.response302Header("/user/login_failed.html");
+                        HttpResponse.writeRedirect(dos,Url.USER_LOGIN_FAILED.path());
                     }
                 }
-            }else if (path.equals("/user/userList")) {
+            }else if (path.equals(Url.USER_LIST.path())) {
                 // 자 여긴 만약에 했을때임
                 if(isLogin){
-                    byte[] bodyFile = Files.readAllBytes(Paths.get("./webapp/user/list.html"));
-                    response.response200Header(bodyFile);
-                    response.responseBody(bodyFile);
+                    byte[] bodyFile = Files.readAllBytes(Paths.get(Url.USER_LIST.filePath()));
+                    HttpResponse.writeResponse(dos, HttpStatus.OK,HttpContentType.HTML.value(), bodyFile);
                     System.out.println("아니 성공은 했딴다");
                 }else{
-                    response.response302Header("/user/login.html");
+                    HttpResponse.writeRedirect(dos,Url.USER_LOGIN_FAILED.path());
                     System.out.println("넌 실패했어");
                 }
 
