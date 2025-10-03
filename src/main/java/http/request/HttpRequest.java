@@ -30,7 +30,7 @@ public class HttpRequest {
         }
         String[] requestLineTokens = requestLine.split(" ");
         HttpMethod method = HttpMethod.valueOf(requestLineTokens[0]);
-        String path = requestLineTokens[1];
+        String url = requestLineTokens[1];
 
         Map<String, String> headers = new HashMap<>();
         String line;
@@ -42,11 +42,23 @@ public class HttpRequest {
         }
 
         Map<String, String> params = new HashMap<>();
+        int queryIndex = url.indexOf("?");
+        String path;
+
+        if (queryIndex != -1) {
+            path = url.substring(0, queryIndex);
+            String queryString = url.substring(queryIndex + 1);
+            params.putAll(HttpRequestUtils.parseQueryParameter(queryString));
+        } else {
+            path = url;
+        }
         String contentLengthValue = headers.get(HttpHeader.CONTENT_LENGTH.getValue());
         if (contentLengthValue != null) {
             int contentLength = Integer.parseInt(contentLengthValue);
-            String bodyString = IOUtils.readData(br, contentLength);
-            params = HttpRequestUtils.parseQueryParameter(bodyString);
+            if (contentLength > 0) {
+                String bodyString = IOUtils.readData(br, contentLength);
+                params.putAll(HttpRequestUtils.parseQueryParameter(bodyString));
+            }
         }
 
         return new HttpRequest(method, path, headers, params);
