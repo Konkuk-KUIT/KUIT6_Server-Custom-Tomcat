@@ -29,6 +29,7 @@ public class RequestHandler implements Runnable {
             DataOutputStream dos = new DataOutputStream(out);
 
             byte[] body = "Hello World".getBytes();
+            MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance(); //싱글톤 생성
 
             String request = br.readLine(); //한 줄 받아와서 검사
             if (request == null) return;
@@ -36,7 +37,7 @@ public class RequestHandler implements Runnable {
             String[] tokens = request.split(" ");
             String method = tokens[0]; //get/post
             String uri = tokens[1]; //2번째 요소가 "/index.html" 과 같은 형식
-            String params = null;
+            String params = null; //회원가입 시 queryString 저장용 변수
 
             System.out.println(uri);
             Path path = null;
@@ -76,24 +77,19 @@ public class RequestHandler implements Runnable {
                 }
             }
 //            IOUtils ioUtils = new IOUtils(br, requestContentLength);
-            if(method.equals("POST")){
+            if (method.equals("POST")) {
                 IOUtils ioUtils = IOUtils.getInstance();
-                params = ioUtils.readData(br, requestContentLength); //"userId=abc&password=123&name=kim" 를 반환함
+                params = ioUtils.readData(br, requestContentLength); //"userId=abc&password=123&name=kim"  반환
             }
-            if(method.equals("GET")&&uri.contains("?")){
+            if (method.equals("GET") && uri.contains("?")) {
                 params = uri.split("\\?")[1];
             }
 
-
-            //get 요청 중 querystring 형식 오는 것을 확인
             //uri="/user/signup?userId=fsfs&password=fsf&name=fsfs&email=sally_0113%40naver.com"
-            String[] queryString = uri.split("\\?");
-
-            if(uri.startsWith("/user/signup")){
+            if (uri.startsWith("/user/signup")) {
                 //들어온 정보를 parsing 하여 User instance 생성
                 String[] userInfo = params.split("[&=]");
                 //userInfo[] => userId, fsfs, password, fsf, name, fsfs, email, sally~
-                //public User(String userId, String password, String name, String email) {
                 String userId = userInfo[1];
                 String password = userInfo[3];
                 String name = userInfo[5];
@@ -101,11 +97,31 @@ public class RequestHandler implements Runnable {
                 User user = new User(userId, password, name, email);
 
                 //만든 user instance 를 MemoryUserRepository 에 저장 후 index.html 반환
-                MemoryUserRepository memoryUserRepository = MemoryUserRepository.getInstance();
                 memoryUserRepository.addUser(user);
                 //302 로 리다이렉트
-                response302Header(dos, "/index.html");
+                response302Header(dos, "/index.html", null);
             }
+
+            //uri="/user/login?userId=fsfs&password=fsf (get인 경우)
+            /*uri이 /user/login/html 인 경우에도 이와 동일하므로 구분해주어야 함
+            => 화면 요청하는 건 GET, 로그인 동작 시에는 POST */
+            if (uri.equals("/user/login")&&method.equals("POST")) {
+                //params = "userId=fsfs&password=fsf"
+                String[] userInfo = params.split("[&=]");
+//                userInfo=> userId, fsfs, password, fsf 담고 있음
+                User newUser = null;
+                newUser = memoryUserRepository.findUserById(userInfo[1]);
+                if (newUser != null) { //해당 유저가 존재하면
+                    //header에 Cookie 추가
+//                    dos.writeBytes("Set-Cookie: logined=true\r\n");
+                    response302Header(dos, "/index.html", "logined=true");
+                } else {
+                    //존재하지 않으면 login_failed 로 돌아감
+                    path = Paths.get("./webapp/user/login_failed.html");
+
+                }
+            }
+
 
             if (path != null)
                 body = Files.readAllBytes(path);
@@ -130,9 +146,12 @@ public class RequestHandler implements Runnable {
         }
     }
 
-    private void response302Header(DataOutputStream dos, String path) {
+    private void response302Header(DataOutputStream dos, String path, String cookie) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            if(cookie!=null) {
+                dos.writeBytes("Set-Cookie: "+cookie+"\r\n");
+            }
             dos.writeBytes("Location: " + path + "\r\n");
             dos.writeBytes("\r\n");
         } catch (Exception e) {
