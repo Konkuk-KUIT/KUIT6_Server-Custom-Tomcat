@@ -128,7 +128,16 @@ public class HttpRequest {
     }
 
     public String getCookie(String name) {
-        return cookies.get(name);
+        String cookieHeader = getHeader("Cookie");  // 요청 헤더에서 꺼내기
+        if (cookieHeader == null) return null;
+        for (String pair : cookieHeader.split(";")) {
+            String[] kv = pair.trim().split("=", 2);
+            if (kv.length == 2 && kv[0].trim().equals(name)) {
+                return kv[1].trim();
+            }
+        }
+        return null;
+        // return cookies.get(name);
     }
 
     public String getBody() {

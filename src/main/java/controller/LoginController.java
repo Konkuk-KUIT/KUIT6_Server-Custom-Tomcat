@@ -34,7 +34,7 @@ public class LoginController implements Controller {
         User user = repository.findUserById(userId);
         log.log(Level.INFO, "Login attempt userId={0}", userId);
         if (user != null && user.getPassword().equals(request.getParameter(UserQueryKey.PASSWORD.key()))) {
-            response.addHeader(HttpHeader.SET_COOKIE, "logined=true");
+            response.addHeader(HttpHeader.SET_COOKIE, "logined=true; Path=/; HttpOnly; SameSite=Lax");
             log.log(Level.INFO, "Login success userId={0}", userId);
             response.response302Header(UrlPath.INDEX.value());
         } else {
