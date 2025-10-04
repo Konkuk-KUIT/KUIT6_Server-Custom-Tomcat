@@ -28,8 +28,36 @@ public class RequestHandler implements Runnable {
             HttpResponse response = new HttpResponse(out);
 
             String url = request.getPath();
+            if (url == null){
+                url = "/";
+            }
+            int q = url.indexOf('?');
+            if (q>=0) {
+                url = url.substring(0, q);
+            }
+
+            if (url.isBlank() || "/".equals(url) || "/index.html".equals(url)) {
+                response.forward("index.html");
+                return;
+            }
+
+            if(url.endsWith(".html")) {
+                String resource = url.startsWith("/") ? url.substring(1) : url;
+                // 앞에 / 가 붙으면 제거해주는 역할
+                response.forward(resource);
+            }
+
             Controller controller = requestMapper.findController(url);
-            controller.execute(request, response);
+            if (controller == null) {
+                String resource = url.startsWith("/") ? url.substring(1) : url;
+                if (resource.endsWith(".css") || resource.endsWith(".js") || resource.endsWith(".png") || resource.endsWith(".jpg") || resource.endsWith(".gif") || resource.endsWith(".ico")) {
+                    response.forward(resource);
+                } else {
+                    response.send404(resource);
+                }
+            } else {
+                controller.execute(request, response);
+            }
 
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
