@@ -1,5 +1,6 @@
 package webserver;
 
+import db.MemoryUserRepository;
 import http.util.HttpRequestUtils;
 
 import java.io.BufferedReader;
@@ -15,6 +16,7 @@ public class HttpRequest {
     private boolean isLogin = false;
     private int contentLength = 0;
     private String body;
+    MemoryUserRepository userDB = MemoryUserRepository.getInstance();
     private Map<String, String> headers = new HashMap<>();
     private Map<String, String> params = new HashMap<>(); // 쿼리 파라미터 또는 본문 데이터
 
@@ -70,6 +72,10 @@ public class HttpRequest {
 
     public int getContentLength() {
         return this.contentLength;
+    }
+
+    public MemoryUserRepository getUserDB() {
+        return this.userDB;
     }
 
     public String getBody() {
