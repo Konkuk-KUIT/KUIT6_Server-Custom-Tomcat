@@ -1,6 +1,7 @@
 package webserver;
 
 import db.Repository;
+import http.util.IOUtils;
 import model.User;
 import java.io.*;
 import java.net.Socket;
@@ -42,6 +43,19 @@ public class RequestHandler implements Runnable{
             String method = startLines[0];
             String url = startLines[1];
 
+            int requestContentLength = 0;
+
+            while (true) {
+                final String line = br.readLine();
+                if (line.equals("")) {
+                    break;
+                }
+                // header info
+                if (line.startsWith("Content-Length")) {
+                    requestContentLength = Integer.parseInt(line.split(": ")[1]);
+                }
+            }
+
             // 요구사항 1번
             if (method.equals("GET") && url.endsWith(".html")) {
                 body = Files.readAllBytes(Paths.get(ROOT_URL + url));
@@ -51,8 +65,9 @@ public class RequestHandler implements Runnable{
                 body = Files.readAllBytes(homePath);
             }
 
-            if (url.startsWith("/user/signup") && method.equals("GET")) {
-                String queryString = url.split("\\?")[1];
+            // 요구사항 3번
+            if (url.equals("/user/signup") && method.equals("POST")) {
+                String queryString = IOUtils.readData(br, requestContentLength);
                 Map<String, String> queryParameter = parseQueryParameter(queryString);
                 User user = new User(queryParameter.get("userId"), queryParameter.get("password"), queryParameter.get("name"), queryParameter.get("email"));
                 repository.addUser(user);
