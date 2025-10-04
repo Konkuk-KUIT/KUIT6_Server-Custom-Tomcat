@@ -29,7 +29,8 @@ public class SignUpController implements Controller {
 
         // Requirement 3 : POST 방식으로 회원가입하기
         if (method == HttpMethod.GET) {
-            response.forward("user/form.html");
+            // response.forward("user/form.html");
+            response.response302Header("/index.html");
             return;
         }
 
@@ -37,9 +38,6 @@ public class SignUpController implements Controller {
             response.send404(request.getPath());
             return;
         }
-
-
-
 
         String userId = normalized(request, UserQueryKey.USER_ID);
         String password = normalized(request, UserQueryKey.PASSWORD);

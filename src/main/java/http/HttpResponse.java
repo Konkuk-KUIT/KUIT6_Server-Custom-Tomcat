@@ -69,7 +69,6 @@ public class HttpResponse {
         String setCookie = headers.get(HttpHeader.SET_COOKIE.value());
         headers.clear();
         addHeader(HttpHeader.LOCATION, location);
-
         addHeader(HttpHeader.CONTENT_LENGTH, "0");
         if (setCookie != null) {
             addHeader(HttpHeader.SET_COOKIE, setCookie);
