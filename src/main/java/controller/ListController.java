@@ -16,10 +16,24 @@ public class ListController implements Controller {
         }
 
         String path = request.getPath();
-        String resource = "user/list.html";
-        if (UrlPath.USER_LIST.value().equals(path) || UrlPath.USER_LIST_HTML.value().equals(path)) {
-            resource = path.startsWith("/") ? path.substring(1) : path;
+        if (path == null) path = "/user/list.html";
+        int q = path.indexOf('?');
+        if (q >= 0) path = path.substring(0, q);
+        String normalized = path.startsWith("/") ? path.substring(1) : path;
+
+        // 3) /user/list 와 /user/list.html 모두 같은 파일로 매핑
+        if (normalized.equals("user/list") || normalized.equals("user/list.html")) {
+            response.forward("user/list.html");   // ★ 항상 .html로
+            return;
         }
-        response.forward(resource);
+
+        // 4) 그 외는 필요에 따라 404 또는 다른 처리
+        response.send404(normalized);
+
+//        String resource = "user/list.html";
+//        if (UrlPath.USER_LIST.value().equals(path) || UrlPath.USER_LIST_HTML.value().equals(path)) {
+//            resource = path.startsWith("/") ? path.substring(1) : path;
+//        }
+//        response.forward(resource);
     }
 }
