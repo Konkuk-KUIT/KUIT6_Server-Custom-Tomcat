@@ -50,10 +50,16 @@ public class HttpResponse {
             return;
         }
 
-        String contentType = Files.probeContentType(target.toPath());
-        if (contentType == null) {
-            contentType = guessContentType(resourcePath);
+        String contentType = guessContentType(resourcePath);
+
+        if ("application/octet-stream".equals(contentType)) {
+            String probed = Files.probeContentType(target.toPath());
+            if (probed != null) contentType = probed;
         }
+
+//        if (contentType == null) {
+//            contentType = guessContentType(resourcePath);
+//        }
 
         byte[] body = readAllBytes(target);
         status = HttpStatus.OK;
@@ -118,8 +124,12 @@ public class HttpResponse {
         if (p.endsWith(".html") || p.endsWith(".htm")) return "text/html;charset=utf-8";
         if (p.endsWith(".css")) return "text/css";
         if (p.endsWith(".js")) return "application/javascript";
+        if (p.endsWith(".json")) return "application/json";
+        if (p.endsWith(".svg"))  return "image/svg+xml";
         if (p.endsWith(".png")) return "image/png";
         if (p.endsWith(".jpg") || p.endsWith(".jpeg")) return "image/jpeg";
+        if (p.endsWith(".gif"))  return "image/gif";
+        if (p.endsWith(".ico"))  return "image/x-icon";
         return "application/octet-stream";
     }
 
