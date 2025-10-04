@@ -2,13 +2,10 @@ package controller;
 
 import db.MemoryUserRepository;
 import db.Repository;
-import http.HttpMethod;
-import http.HttpRequest;
-import http.HttpResponse;
+import http.*;
 import model.User;
 import model.UserQueryKey;
 import webserver.UrlPath;
-import http.HttpHeader;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -34,7 +31,8 @@ public class LoginController implements Controller {
         User user = repository.findUserById(userId);
         log.log(Level.INFO, "Login attempt userId={0}", userId);
         if (user != null && user.getPassword().equals(request.getParameter(UserQueryKey.PASSWORD.key()))) {
-            response.addHeader(HttpHeader.SET_COOKIE, "logined=true; Path=/; HttpOnly; SameSite=Lax");
+            response.addHeader(HttpHeader.SET_COOKIE, CookieName.LOGINED.key() + "=true; Path=/; HttpOnly; SameSite=Lax");
+
             log.log(Level.INFO, "Login success userId={0}", userId);
             response.response302Header(UrlPath.INDEX.value());
         } else {

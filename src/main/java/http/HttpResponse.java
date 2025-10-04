@@ -50,12 +50,18 @@ public class HttpResponse {
             return;
         }
 
-        String contentType = guessContentType(resourcePath);
+        // String contentType = guessContentType(resourcePath);
 
-        if ("application/octet-stream".equals(contentType)) {
+        String contentType = FormatType.fromFilename(resourcePath);
+        if (FormatType.OCTET.contentType().equals(contentType)) {
             String probed = Files.probeContentType(target.toPath());
             if (probed != null) contentType = probed;
         }
+
+//        if ("application/octet-stream".equals(contentType)) {
+//            String probed = Files.probeContentType(target.toPath());
+//            if (probed != null) contentType = probed;
+//        }
 
 //        if (contentType == null) {
 //            contentType = guessContentType(resourcePath);

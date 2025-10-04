@@ -19,8 +19,10 @@ public class RequestMapper {
         HomeController homeController = new HomeController();
         controllers.put(UrlPath.ROOT.value(), homeController);
         controllers.put(UrlPath.INDEX.value(), homeController);
+
         controllers.put(UrlPath.USER_SIGNUP.value(), new SignUpController());
         controllers.put(UrlPath.USER_LOGIN.value(), new LoginController());
+
         controllers.put(UrlPath.USER_LIST.value(), new ListController());
         controllers.put(UrlPath.USER_LIST_ALIAS.value(), new ListController());
         controllers.put(UrlPath.USER_LIST_HTML.value(), new ListController());

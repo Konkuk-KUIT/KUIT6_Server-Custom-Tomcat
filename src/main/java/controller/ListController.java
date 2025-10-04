@@ -1,5 +1,6 @@
 package controller;
 
+import http.CookieName;
 import http.HttpRequest;
 import http.HttpResponse;
 import webserver.UrlPath;
@@ -9,7 +10,7 @@ import java.io.IOException;
 public class ListController implements Controller {
     @Override
     public void execute(HttpRequest request, HttpResponse response) throws IOException {
-        String logined = request.getCookie("logined");
+        String logined = request.getCookie(CookieName.LOGINED.key());
         if (!"true".equalsIgnoreCase(logined)) {
             response.forward(UrlPath.USER_LOGIN_PAGE.value());
             return;

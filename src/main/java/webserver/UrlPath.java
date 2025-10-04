@@ -8,7 +8,7 @@ public enum UrlPath {
     USER_LOGIN("/user/login"),
     USER_LOGIN_PAGE("/user/login.html"),
     USER_LOGIN_FAILED("/user/login_failed.html"),
-    USER_LIST("/user/list.html"),
+    USER_LIST("/user/list"),
     USER_LIST_ALIAS("/user/userList"),
     USER_LIST_HTML("/user/userList.html");
 
