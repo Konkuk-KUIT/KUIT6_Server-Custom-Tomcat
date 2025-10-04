@@ -22,8 +22,6 @@ public class RequestHandler implements Runnable{
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
 
     private final Repository repository;
-    private Controller controller = new ForwardController();
-
 
     public RequestHandler(Socket connection) {
         this.connection = connection;
@@ -37,35 +35,12 @@ public class RequestHandler implements Runnable{
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()){
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             DataOutputStream dos = new DataOutputStream(out);
+
             HttpRequest httpRequest = HttpRequest.from(br);
             HttpResponse httpResponse = new HttpResponse(dos);
 
-            // 요구 사항 1번
-            if ("GET".equals(httpRequest.getMethod()) && httpRequest.getPath().endsWith(".html")) {
-                controller = new ForwardController();
-            }
-
-            if (httpRequest.getPath().equals("/")) {
-                controller = new HomeController();
-            }
-
-            // 요구 사항 2,3,4번
-            if (httpRequest.getPath().equals(HttpUrls.SIGNUP.getPath())) {
-                controller = new SignUpController();
-            }
-
-            // 요구 사항 5번
-            if (httpRequest.getPath().equals(HttpUrls.LOGIN.getPath())) {
-                controller = new LoginController();
-            }
-
-            // 요구 사항 6번
-            if (httpRequest.getPath().equals(HttpUrls.USERLIST.getPath())) {
-                controller = new ListController();
-            }
-
-            controller.execute(httpRequest, httpResponse);
-
+            RequestMapper requestMapper = new RequestMapper(httpRequest,httpResponse);
+            requestMapper.proceed();
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
         }
