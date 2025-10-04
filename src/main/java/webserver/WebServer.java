@@ -1,5 +1,7 @@
 package webserver;
 
+import db.MemoryUserRepository;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -27,7 +29,7 @@ public class WebServer {
             Socket connection;
             while ((connection = welcomeSocket.accept()) != null) {
                 // 스레드에 작업 전달
-                service.submit(new RequestHandler(connection));
+                service.submit(new RequestHandler(connection, MemoryUserRepository.getInstance()));
             }
         }
 
