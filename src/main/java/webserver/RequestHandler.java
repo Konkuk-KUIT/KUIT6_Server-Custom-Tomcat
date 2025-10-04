@@ -100,6 +100,22 @@ public class RequestHandler implements Runnable{
                 body = Files.readAllBytes(Paths.get(ROOT_URL + LIST_URL));
             }
 
+            // 요구사항 7번
+            if (method.equals("GET") && url.endsWith(".css")) {
+                body = Files.readAllBytes(Paths.get(ROOT_URL + url));
+                response200HeaderWithCss(dos, body.length);
+                responseBody(dos, body);
+                return;
+            }
+
+            // image
+            if (method.equals("GET") && url.endsWith(".jpeg")) {
+                body = Files.readAllBytes(Paths.get(ROOT_URL + url));
+                response200Header(dos, body.length);
+                responseBody(dos, body);
+                return;
+            }
+
             response200Header(dos, body.length);
             responseBody(dos, body);
 
@@ -122,6 +138,18 @@ public class RequestHandler implements Runnable{
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private void response200HeaderWithCss(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+            dos.flush();
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
         }
