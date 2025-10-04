@@ -20,6 +20,8 @@ public class RequestHandler implements Runnable{
     private static final String ROOT_URL = "./webapp";
     private static final String HOME_URL = "/index.html";
     private static final String LOGIN_FAILED_URL = "/user/login_failed.html";
+    private static final String LOGIN_URL = "/user/login.html";
+    private static final String LIST_URL = "/user/list.html";
 
     private final Repository repository;
     private final Path homePath = Paths.get(ROOT_URL + HOME_URL);
@@ -45,6 +47,7 @@ public class RequestHandler implements Runnable{
             String url = startLines[1];
 
             int requestContentLength = 0;
+            String cookie = "";
 
             while (true) {
                 final String line = br.readLine();
@@ -54,6 +57,9 @@ public class RequestHandler implements Runnable{
                 // header info
                 if (line.startsWith("Content-Length")) {
                     requestContentLength = Integer.parseInt(line.split(": ")[1]);
+                }
+                if (line.startsWith("Cookie")) {
+                    cookie = line.split(": ")[1];
                 }
             }
 
@@ -83,6 +89,15 @@ public class RequestHandler implements Runnable{
                 User user = repository.findUserById(queryParameter.get("userId"));
                 login(dos, queryParameter, user);
                 return;
+            }
+
+            // 요구사항 6번
+            if (url.equals("/user/userList")) {
+                if (!cookie.equals("logined=true")) {
+                    response302Header(dos,LOGIN_URL);
+                    return;
+                }
+                body = Files.readAllBytes(Paths.get(ROOT_URL + LIST_URL));
             }
 
             response200Header(dos, body.length);
