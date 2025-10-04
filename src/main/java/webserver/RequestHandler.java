@@ -19,6 +19,7 @@ public class RequestHandler implements Runnable{
     private static final Logger log = Logger.getLogger(RequestHandler.class.getName());
     private static final String ROOT_URL = "./webapp";
     private static final String HOME_URL = "/index.html";
+    private static final String LOGIN_FAILED_URL = "/user/login_failed.html";
 
     private final Repository repository;
     private final Path homePath = Paths.get(ROOT_URL + HOME_URL);
@@ -75,12 +76,29 @@ public class RequestHandler implements Runnable{
                 return;
             }
 
+            // 요구사항 5번
+            if (url.equals("/user/login")) {
+                String queryString = IOUtils.readData(br, requestContentLength);
+                Map<String, String> queryParameter = parseQueryParameter(queryString);
+                User user = repository.findUserById(queryParameter.get("userId"));
+                login(dos, queryParameter, user);
+                return;
+            }
+
             response200Header(dos, body.length);
             responseBody(dos, body);
 
         } catch (IOException e) {
             log.log(Level.SEVERE,e.getMessage());
         }
+    }
+
+    private void login(DataOutputStream dos, Map<String, String> queryParameter, User user) {
+        if (user != null && user.getPassword().equals(queryParameter.get("password"))) {
+            response302HeaderWithCookie(dos, HOME_URL);
+            return;
+        }
+        response302Header(dos, LOGIN_FAILED_URL);
     }
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
@@ -99,6 +117,17 @@ public class RequestHandler implements Runnable{
         try {
             dos.writeBytes("HTTP/1.1 302 Redirect \r\n");
             dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.log(Level.SEVERE, e.getMessage());
+        }
+    }
+
+    private void response302HeaderWithCookie(DataOutputStream dos, String path) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Redirect \r\n");
+            dos.writeBytes("Location: " + path + "\r\n");
+            dos.writeBytes("Set-Cookie: logined=true" + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage());
